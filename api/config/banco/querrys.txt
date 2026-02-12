@@ -1,0 +1,62 @@
+-- 1. Criação do Banco de Dados
+CREATE DATABASE IF NOT EXISTS financeiro_martinelli
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+USE financeiro_martinelli;
+
+-- 2. Tabela de Categorias
+CREATE TABLE IF NOT EXISTS categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL,
+    tipo ENUM('receita', 'despesa') NOT NULL, -- Ex: 'receita' ou 'despesa'
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Tabela de Transações (Fluxo de Caixa e Fatura)
+CREATE TABLE IF NOT EXISTS transacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    descricao VARCHAR(100) NOT NULL,
+    valor DECIMAL(10, 2) NOT NULL,
+    data DATE NOT NULL,
+    tipo ENUM('receita', 'despesa') NOT NULL,
+    status ENUM('pago', 'pendente') DEFAULT 'pago', -- Essencial para o Cartão de Crédito
+    id_categoria INT,
+    observacao TEXT,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Vínculo com categoria (se apagar a categoria, a transação fica NULL)
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id) ON DELETE SET NULL
+);
+
+-- 4. Tabela de Cofrinhos (Caixinhas)
+CREATE TABLE IF NOT EXISTS cofrinhos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL,
+    meta DECIMAL(10, 2) DEFAULT 0.00,
+    saldo_atual DECIMAL(10, 2) DEFAULT 0.00,
+    imagem VARCHAR(50) DEFAULT 'piggy-bank',
+    cor_fundo VARCHAR(20) DEFAULT 'bg-blue-600', -- Para salvar a cor do card
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Inserir Categorias Padrão (Opcional, mas útil)
+INSERT INTO categorias (nome, tipo) VALUES 
+('Salário', 'receita'),
+('Freelance', 'receita'),
+('Alimentação', 'despesa'),
+('Moradia', 'despesa'),
+('Transporte', 'despesa'),
+('Lazer', 'despesa'),
+('Saúde', 'despesa'),
+('Educação', 'despesa');
+
+-- 6. INSERÇÃO OBRIGATÓRIA: Categoria do Cartão de Crédito
+-- Forçamos o ID 999 pois usamos esse número no código PHP
+INSERT INTO categorias (id, nome, tipo) VALUES (999, 'Cartão de Crédito', 'despesa')
+ON DUPLICATE KEY UPDATE nome='Cartão de Crédito';
+
+-- 7. Otimização (Índices para deixar o dashboard rápido)
+CREATE INDEX IF NOT EXISTS idx_transacoes_data ON transacoes(data);
+CREATE INDEX IF NOT EXISTS idx_transacoes_tipo ON transacoes(tipo);
+CREATE INDEX IF NOT EXISTS idx_transacoes_cat ON transacoes(id_categoria);

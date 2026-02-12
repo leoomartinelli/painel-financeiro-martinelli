@@ -1,0 +1,17 @@
+{
+    "name": "notebook/financeiro_martinelli",
+    "autoload": {
+        "psr-4": {
+            "Notebook\\FinanceiroMartinelli\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Leonardo Martinelli",
+            "email": "martinelliunivap@gmail.com"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    }
+}
