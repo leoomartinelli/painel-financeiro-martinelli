@@ -866,6 +866,24 @@ document.getElementById('formEditarMeta').addEventListener('submit', async (e) =
     }
 });
 
+async function logout() {
+    if (!confirm("Deseja realmente encerrar sua sessão?")) return;
+
+    try {
+        const response = await fetch('/financeiro_martinelli/api/logout', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            window.location.href = 'login.html';
+        }
+    } catch (error) {
+        console.error('Erro ao sair:', error);
+        alert('Não foi possível encerrar a sessão.');
+    }
+}
+
 
 
 // --- UTILITÁRIOS ---

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Financeiro Martinelli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+        <div
+            class="glass-effect bg-white rounded-3xl shadow-2xl shadow-blue-100/50 border border-white overflow-hidden">
+
+            <div class="p-8 pb-4 text-center">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-200 mb-4">
+                    <i class="ph ph-currency-dollar text-3xl font-bold"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Financeiro Martinelli</h1>
+                <p class="text-gray-500 text-sm mt-1">Gestão financeira pessoal e inteligente</p>
+            </div>
+
+            <div class="p-8 pt-4">
+                <form id="formLogin" class="space-y-5">
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">E-mail</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                <i class="ph ph-envelope-simple text-xl"></i>
+                            </span>
+                            <input type="email" id="email" required
+                                class="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 pl-12 pr-4 text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                placeholder="seu@email.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Senha</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                <i class="ph ph-lock-simple text-xl"></i>
+                            </span>
+                            <input type="password" id="senha" required
+                                class="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3 pl-12 pr-4 text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnEntrar"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-2">
+                        <span>Acessar Painel</span>
+                        <i class="ph ph-arrow-right font-bold"></i>
+                    </button>
+                </form>
+
+                <div class="mt-8 pt-6 border-t border-gray-50 text-center">
+                    <p class="text-gray-400 text-xs font-medium">
+                        &copy; 2026 Martinelli Sistemas. Todos os direitos reservados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginLoader"
+        class="fixed inset-0 bg-white/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="flex flex-col items-center">
+            <i class="ph ph-circle-notch animate-spin text-4xl text-blue-600 mb-2"></i>
+            <span class="text-sm font-bold text-gray-600">Verificando...</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/financeiro_martinelli/api';
+
+        document.getElementById('formLogin').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const loader = document.getElementById('loginLoader');
+            loader.classList.remove('hidden');
+
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, senha })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = 'index.html';
+                } else {
+                    alert(data.message || 'Erro ao realizar login.');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro de conexão com o servidor.');
+            } finally {
+                loader.classList.add('hidden');
+            }
+        };
+    </script>
+</body>
+
+</html>

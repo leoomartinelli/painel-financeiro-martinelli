@@ -10,6 +10,10 @@ class PersonalController
     public function __construct()
     {
         $this->model = new PersonalFinanceiro();
+        // Garante que a sessão esteja ativa para acessar o usuario_id
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
     }
 
     private function jsonResponse($data, $status = 200)
@@ -23,12 +27,13 @@ class PersonalController
     // GET /api/dashboard
     public function getDashboard()
     {
+        $idUsuario = $_SESSION['usuario_id']; //
         $mes = $_GET['mes'] ?? date('m');
         $ano = $_GET['ano'] ?? date('Y');
 
-        $resumo = $this->model->getResumoMes($mes, $ano);
-        $transacoes = $this->model->getTransacoes($mes, $ano);
-        $grafico = $this->model->getDadosAnuais($ano);
+        $resumo = $this->model->getResumoMes($mes, $ano, $idUsuario);
+        $transacoes = $this->model->getTransacoes($mes, $ano, $idUsuario);
+        $grafico = $this->model->getDadosAnuais($ano, $idUsuario);
 
         $this->jsonResponse([
             'success' => true,
@@ -43,150 +48,141 @@ class PersonalController
     // GET /api/transacoes
     public function listarTransacoes()
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $mes = $_GET['mes'] ?? date('m');
         $ano = $_GET['ano'] ?? date('Y');
         $tipo = $_GET['tipo'] ?? null;
 
-        $dados = $this->model->getTransacoes($mes, $ano, $tipo);
+        $dados = $this->model->getTransacoes($mes, $ano, $idUsuario, $tipo);
         $this->jsonResponse(['success' => true, 'data' => $dados]);
     }
 
     // POST /api/transacoes
-    public function salvarTransacao() // <--- PARENTESES VAZIOS (CORRETO)
+    public function salvarTransacao()
     {
-        // Pega os dados aqui dentro
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (empty($input['descricao']) || empty($input['valor']) || empty($input['data'])) {
             $this->jsonResponse(['success' => false, 'message' => 'Campos obrigatórios faltando.'], 400);
         }
 
-        if (!isset($input['tipo']) || !in_array($input['tipo'], ['receita', 'despesa'])) {
-            $this->jsonResponse(['success' => false, 'message' => 'Tipo inválido.'], 400);
-        }
-
-        $resultado = $this->model->criarTransacao($input);
+        $resultado = $this->model->criarTransacao($input, $idUsuario);
         $this->jsonResponse($resultado);
     }
 
     // PUT /api/transacoes/{id}
-    public function editarTransacao($id) // <--- Recebe apenas o ID da URL
+    public function editarTransacao($id)
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
-        $resultado = $this->model->atualizarTransacao($id, $input);
+        $resultado = $this->model->atualizarTransacao($id, $input, $idUsuario);
         $this->jsonResponse($resultado);
     }
 
     // DELETE /api/transacoes/{id}
     public function excluirTransacao($id)
     {
-        $resultado = $this->model->deletarTransacao($id);
+        $idUsuario = $_SESSION['usuario_id'];
+        $resultado = $this->model->deletarTransacao($id, $idUsuario);
         $this->jsonResponse($resultado);
     }
 
     // GET /api/categorias
     public function listarCategorias()
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $tipo = $_GET['tipo'] ?? null;
-        $dados = $this->model->getCategorias($tipo);
+        $dados = $this->model->getCategorias($idUsuario, $tipo);
         $this->jsonResponse(['success' => true, 'data' => $dados]);
     }
 
     // POST /api/categorias
-    public function criarCategoria() // <--- PARENTESES VAZIOS (CORRIGIDO AQUI)
+    public function salvarCategoria()
     {
-        // Pega os dados aqui dentro
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (empty($input['nome']) || empty($input['tipo'])) {
             $this->jsonResponse(['success' => false, 'message' => 'Nome e Tipo são obrigatórios.'], 400);
         }
 
-        $resultado = $this->model->criarCategoria($input['nome'], $input['tipo']);
-        $this->jsonResponse($resultado);
-    }
-
-    public function editarCategoria($id)
-    {
-        $input = json_decode(file_get_contents('php://input'), true);
-
-        if (empty($input['nome']) || empty($input['tipo'])) {
-            $this->jsonResponse(['success' => false, 'message' => 'Dados incompletos.'], 400);
-        }
-
-        $resultado = $this->model->atualizarCategoria($id, $input['nome'], $input['tipo']);
+        $resultado = $this->model->criarCategoria($input['nome'], $input['tipo'], $idUsuario);
         $this->jsonResponse($resultado);
     }
 
     // DELETE /api/categorias/{id}
     public function excluirCategoria($id)
     {
-        $resultado = $this->model->deletarCategoria($id);
+        $idUsuario = $_SESSION['usuario_id'];
+        $resultado = $this->model->deletarCategoria($id, $idUsuario);
         $this->jsonResponse($resultado);
     }
 
+    // GET /api/cartao
     public function getDadosCartao()
     {
-        $dados = $this->model->getFaturaAberta();
+        $idUsuario = $_SESSION['usuario_id'];
+        $dados = $this->model->getFaturaAberta($idUsuario);
         $this->jsonResponse(['success' => true, 'data' => $dados]);
     }
 
     // POST /api/cartao/pagar
     public function pagarFatura()
     {
-        $resultado = $this->model->pagarFatura();
+        $idUsuario = $_SESSION['usuario_id'];
+        $resultado = $this->model->pagarFatura($idUsuario);
         $this->jsonResponse($resultado);
     }
 
     // --- COFRINHOS ---
 
-    // GET /api/cofrinhos
     public function listarCofrinhos()
     {
-        $dados = $this->model->listarCofrinhos();
+        $idUsuario = $_SESSION['usuario_id'];
+        $dados = $this->model->listarCofrinhos($idUsuario);
         $this->jsonResponse(['success' => true, 'data' => $dados]);
     }
 
-    // POST /api/cofrinhos
     public function criarCofrinho()
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
-        if (empty($input['nome'])) {
-            $this->jsonResponse(['success' => false, 'message' => 'Nome obrigatório'], 400);
-        }
-        $res = $this->model->criarCofrinho($input['nome'], $input['meta'] ?? 0, $input['cor'] ?? 'bg-blue-600');
+
+        $res = $this->model->criarCofrinho(
+            $input['nome'],
+            $input['meta'] ?? 0,
+            $input['cor'] ?? 'bg-blue-600',
+            $idUsuario
+        );
         $this->jsonResponse($res);
     }
 
-    // POST /api/cofrinhos/movimentar
     public function movimentarCofrinho()
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
 
         if (empty($input['id']) || empty($input['valor']) || empty($input['tipo'])) {
             $this->jsonResponse(['success' => false, 'message' => 'Dados inválidos'], 400);
         }
 
-        $res = $this->model->movimentarCofrinho($input['id'], $input['valor'], $input['tipo']);
+        $res = $this->model->movimentarCofrinho($input['id'], $input['valor'], $input['tipo'], $idUsuario);
         $this->jsonResponse($res);
     }
 
-    // DELETE /api/cofrinhos/{id}
     public function excluirCofrinho($id)
     {
-        $res = $this->model->excluirCofrinho($id);
+        $idUsuario = $_SESSION['usuario_id'];
+        $res = $this->model->excluirCofrinho($id, $idUsuario);
         $this->jsonResponse($res);
     }
 
     public function editarMetaCofrinho($id)
     {
+        $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
-
-        if (!isset($input['meta']) || $input['meta'] < 0) {
-            $this->jsonResponse(['success' => false, 'message' => 'Valor da meta inválido.'], 400);
-        }
-
-        $res = $this->model->atualizarMetaCofrinho($id, $input['meta']);
+        $res = $this->model->atualizarMetaCofrinho($id, $input['meta'], $idUsuario);
         $this->jsonResponse($res);
     }
 }

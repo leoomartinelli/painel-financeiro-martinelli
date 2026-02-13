@@ -13,105 +13,87 @@ class PersonalFinanceiro
     }
 
     // --- DASHBOARD (Cards do Topo) ---
-    // --- DASHBOARD (Cards do Topo) ---
-    // api/model/PersonalFinanceiro.php
-
-    public function getResumoMes($mes, $ano)
+    public function getResumoMes($mes, $ano, $idUsuario)
     {
         // 1. RECEITAS REALIZADAS (Pagas)
         $sqlReceitas = "SELECT COALESCE(SUM(valor), 0) as total 
                         FROM transacoes 
                         WHERE tipo = 'receita' AND status = 'pago' 
-                        AND MONTH(data) = :mes AND YEAR(data) = :ano";
+                        AND MONTH(data) = :mes AND YEAR(data) = :ano AND id_usuario = :id_user";
 
         // 2. RECEITAS PENDENTES
         $sqlReceitasPend = "SELECT COALESCE(SUM(valor), 0) as total 
                             FROM transacoes 
                             WHERE tipo = 'receita' AND status = 'pendente' 
-                            AND MONTH(data) = :mes AND YEAR(data) = :ano";
+                            AND MONTH(data) = :mes AND YEAR(data) = :ano AND id_usuario = :id_user";
 
         // 3. DESPESAS REALIZADAS (Pagas)
         $sqlDespesas = "SELECT COALESCE(SUM(valor), 0) as total 
                         FROM transacoes 
                         WHERE tipo = 'despesa' AND status = 'pago' 
-                        AND MONTH(data) = :mes AND YEAR(data) = :ano";
+                        AND MONTH(data) = :mes AND YEAR(data) = :ano AND id_usuario = :id_user";
 
-        // 4. DESPESAS PENDENTES (Normais)
-        // Nota: O filtro de ID cartão é opcional aqui pois vamos somar a fatura separada abaixo
+        // 4. DESPESAS PENDENTES
         $sqlDespesasPend = "SELECT COALESCE(SUM(valor), 0) as total 
                             FROM transacoes 
                             WHERE tipo = 'despesa' AND status = 'pendente' 
-                            AND MONTH(data) = :mes AND YEAR(data) = :ano";
+                            AND MONTH(data) = :mes AND YEAR(data) = :ano AND id_usuario = :id_user";
 
-        // 5. FATURA CARTÃO (Total Acumulado Pendente)
-        $stmtCat = $this->conn->prepare("SELECT id FROM categorias WHERE nome LIKE :nome LIMIT 1");
-        $stmtCat->execute([':nome' => '%Cartão%']);
+        // 5. FATURA CARTÃO (Baseado na categoria do usuário)
+        $stmtCat = $this->conn->prepare("SELECT id FROM categorias WHERE nome LIKE :nome AND id_usuario = :id_user LIMIT 1");
+        $stmtCat->execute([':nome' => '%Cartão%', ':id_user' => $idUsuario]);
         $catCartao = $stmtCat->fetch(PDO::FETCH_ASSOC);
-        $idCartao = $catCartao ? $catCartao['id'] : 999;
+        $idCartao = $catCartao ? $catCartao['id'] : 0;
 
         $sqlFatura = "SELECT COALESCE(SUM(valor), 0) as total 
                       FROM transacoes 
-                      WHERE id_categoria = :idCartao AND status = 'pendente'";
+                      WHERE id_categoria = :idCartao AND status = 'pendente' AND id_usuario = :id_user";
 
         try {
-            // Execuções
             $stmtR = $this->conn->prepare($sqlReceitas);
-            $stmtR->execute([':mes' => $mes, ':ano' => $ano]);
+            $stmtR->execute([':mes' => $mes, ':ano' => $ano, ':id_user' => $idUsuario]);
             $valReceitaRealizada = (float) $stmtR->fetch(PDO::FETCH_ASSOC)['total'];
 
             $stmtRP = $this->conn->prepare($sqlReceitasPend);
-            $stmtRP->execute([':mes' => $mes, ':ano' => $ano]);
+            $stmtRP->execute([':mes' => $mes, ':ano' => $ano, ':id_user' => $idUsuario]);
             $valReceitaPendente = (float) $stmtRP->fetch(PDO::FETCH_ASSOC)['total'];
 
             $stmtD = $this->conn->prepare($sqlDespesas);
-            $stmtD->execute([':mes' => $mes, ':ano' => $ano]);
+            $stmtD->execute([':mes' => $mes, ':ano' => $ano, ':id_user' => $idUsuario]);
             $valDespesaRealizada = (float) $stmtD->fetch(PDO::FETCH_ASSOC)['total'];
 
             $stmtDP = $this->conn->prepare($sqlDespesasPend);
-            $stmtDP->execute([':mes' => $mes, ':ano' => $ano]);
+            $stmtDP->execute([':mes' => $mes, ':ano' => $ano, ':id_user' => $idUsuario]);
             $valDespesaPendente = (float) $stmtDP->fetch(PDO::FETCH_ASSOC)['total'];
 
             $stmtF = $this->conn->prepare($sqlFatura);
-            $stmtF->execute([':idCartao' => $idCartao]);
+            $stmtF->execute([':idCartao' => $idCartao, ':id_user' => $idUsuario]);
             $valFaturaTotal = (float) $stmtF->fetch(PDO::FETCH_ASSOC)['total'];
 
-            // --- CÁLCULOS FINAIS ---
-
-            // Saldo Atual = O que entrou (Pago) - O que saiu (Pago)
             $saldoAtualCalc = $valReceitaRealizada - $valDespesaRealizada;
-
-            // Saldo Previsto = Saldo Atual + A Receber - (A Pagar Mês + Fatura Total)
-            // Obs: Se a fatura já estiver no "A Pagar Mês", isso duplica, mas melhor sobrar previsão de gasto que faltar.
             $saldoPrevistoCalc = ($saldoAtualCalc + $valReceitaPendente) - ($valDespesaPendente + $valFaturaTotal);
 
             return [
-                'receitas' => [
-                    'receita_realizada' => $valReceitaRealizada,
-                    'receita_pendente' => $valReceitaPendente
-                ],
-                'despesas' => [
-                    'despesa_realizada' => $valDespesaRealizada,
-                    'despesa_pendente' => $valDespesaPendente
-                ],
-                // Aqui usamos nomes explícitos para evitar confusão de variáveis
+                'receitas' => ['receita_realizada' => $valReceitaRealizada, 'receita_pendente' => $valReceitaPendente],
+                'despesas' => ['despesa_realizada' => $valDespesaRealizada, 'despesa_pendente' => $valDespesaPendente],
                 'saldo_atual' => $saldoAtualCalc,
                 'saldo_previsto' => $saldoPrevistoCalc,
                 'fatura_prevista' => $valFaturaTotal
             ];
-
         } catch (PDOException $e) {
             return null;
         }
     }
-    // --- TRANSAÇÕES (Listagem Recente) ---
-    public function getTransacoes($mes, $ano, $tipo = null)
+
+    // --- TRANSAÇÕES ---
+    public function getTransacoes($mes, $ano, $idUsuario, $tipo = null)
     {
         $query = "SELECT t.*, c.nome as categoria_nome 
                   FROM transacoes t
                   LEFT JOIN categorias c ON t.id_categoria = c.id
-                  WHERE MONTH(t.data) = :mes AND YEAR(t.data) = :ano";
+                  WHERE MONTH(t.data) = :mes AND YEAR(t.data) = :ano AND t.id_usuario = :id_user";
 
-        $params = [':mes' => $mes, ':ano' => $ano];
+        $params = [':mes' => $mes, ':ano' => $ano, ':id_user' => $idUsuario];
 
         if ($tipo) {
             $query .= " AND t.tipo = :tipo";
@@ -129,33 +111,29 @@ class PersonalFinanceiro
         }
     }
 
-    // --- GRÁFICO ANUAL ---
-    public function getDadosAnuais($ano)
+    public function getDadosAnuais($ano, $idUsuario)
     {
         $query = "SELECT 
                     MONTH(data) as mes,
                     SUM(CASE WHEN tipo = 'receita' AND status = 'pago' THEN valor ELSE 0 END) as receitas,
                     SUM(CASE WHEN tipo = 'despesa' AND status = 'pago' THEN valor ELSE 0 END) as despesas
                   FROM transacoes
-                  WHERE YEAR(data) = :ano
+                  WHERE YEAR(data) = :ano AND id_usuario = :id_user
                   GROUP BY MONTH(data)
                   ORDER BY MONTH(data)";
-
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([':ano' => $ano]);
+            $stmt->execute([':ano' => $ano, ':id_user' => $idUsuario]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             return [];
         }
     }
 
-    // --- CRUD TRANSAÇÕES ---
-    public function criarTransacao($dados)
+    public function criarTransacao($dados, $idUsuario)
     {
-        $query = "INSERT INTO transacoes (descricao, valor, data, tipo, status, id_categoria, observacao) 
-                  VALUES (:descricao, :valor, :data, :tipo, :status, :id_categoria, :observacao)";
-
+        $query = "INSERT INTO transacoes (descricao, valor, data, tipo, status, id_categoria, observacao, id_usuario) 
+                  VALUES (:descricao, :valor, :data, :tipo, :status, :id_categoria, :observacao, :id_user)";
         try {
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
@@ -165,20 +143,21 @@ class PersonalFinanceiro
                 ':tipo' => $dados['tipo'],
                 ':status' => $dados['status'] ?? 'pago',
                 ':id_categoria' => !empty($dados['id_categoria']) ? $dados['id_categoria'] : null,
-                ':observacao' => $dados['observacao'] ?? null
+                ':observacao' => $dados['observacao'] ?? null,
+                ':id_user' => $idUsuario
             ]);
-            return ['success' => true, 'message' => 'Transação criada com sucesso!'];
+            return ['success' => true];
         } catch (PDOException $e) {
-            return ['success' => false, 'message' => 'Erro ao criar: ' . $e->getMessage()];
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    public function atualizarTransacao($id, $dados)
+    public function atualizarTransacao($id, $dados, $idUsuario)
     {
         $query = "UPDATE transacoes SET 
                     descricao = :descricao, valor = :valor, data = :data, 
                     tipo = :tipo, status = :status, id_categoria = :id_categoria, observacao = :observacao
-                  WHERE id = :id";
+                  WHERE id = :id AND id_usuario = :id_user";
         try {
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
@@ -189,7 +168,8 @@ class PersonalFinanceiro
                 ':status' => $dados['status'],
                 ':id_categoria' => !empty($dados['id_categoria']) ? $dados['id_categoria'] : null,
                 ':observacao' => $dados['observacao'] ?? null,
-                ':id' => $id
+                ':id' => $id,
+                ':id_user' => $idUsuario
             ]);
             return ['success' => true];
         } catch (PDOException $e) {
@@ -197,12 +177,12 @@ class PersonalFinanceiro
         }
     }
 
-    public function deletarTransacao($id)
+    public function deletarTransacao($id, $idUsuario)
     {
-        $query = "DELETE FROM transacoes WHERE id = :id";
+        $query = "DELETE FROM transacoes WHERE id = :id AND id_usuario = :id_user";
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([':id' => $id]);
+            $stmt->execute([':id' => $id, ':id_user' => $idUsuario]);
             return ['success' => true];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -210,207 +190,141 @@ class PersonalFinanceiro
     }
 
     // --- CATEGORIAS ---
-    public function getCategorias($tipo = null)
+    public function getCategorias($idUsuario, $tipo = null)
     {
-        $query = "SELECT * FROM categorias";
-        $params = [];
-
+        $query = "SELECT * FROM categorias WHERE id_usuario = :id_user";
+        $params = [':id_user' => $idUsuario];
         if ($tipo) {
-            $query .= " WHERE tipo = :tipo";
+            $query .= " AND tipo = :tipo";
             $params[':tipo'] = $tipo;
         }
-
         $query .= " ORDER BY nome ASC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function criarCategoria($nome, $tipo)
+    public function criarCategoria($nome, $tipo, $idUsuario)
     {
-        $query = "INSERT INTO categorias (nome, tipo) VALUES (:nome, :tipo)";
+        $query = "INSERT INTO categorias (nome, tipo, id_usuario) VALUES (:nome, :tipo, :id_user)";
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([':nome' => $nome, ':tipo' => $tipo]);
+            $stmt->execute([':nome' => $nome, ':tipo' => $tipo, ':id_user' => $idUsuario]);
             return ['success' => true, 'id' => $this->conn->lastInsertId()];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    public function atualizarCategoria($id, $nome, $tipo)
+    public function deletarCategoria($id, $idUsuario)
     {
-        $query = "UPDATE categorias SET nome = :nome, tipo = :tipo WHERE id = :id";
         try {
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute([':nome' => $nome, ':tipo' => $tipo, ':id' => $id]);
+            $this->conn->prepare("UPDATE transacoes SET id_categoria = NULL WHERE id_categoria = :id AND id_usuario = :id_user")->execute([':id' => $id, ':id_user' => $idUsuario]);
+            $stmt = $this->conn->prepare("DELETE FROM categorias WHERE id = :id AND id_usuario = :id_user");
+            $stmt->execute([':id' => $id, ':id_user' => $idUsuario]);
             return ['success' => true];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    public function deletarCategoria($id)
+    // --- FATURA CARTÃO ---
+    public function getFaturaAberta($idUsuario)
     {
-        // Primeiro: Desvincula das transações existentes para não dar erro
-        // As transações ficarão "Sem Categoria"
-        $queryDesvincular = "UPDATE transacoes SET id_categoria = NULL WHERE id_categoria = :id";
-
-        $queryDeletar = "DELETE FROM categorias WHERE id = :id";
+        $stmtCat = $this->conn->prepare("SELECT id FROM categorias WHERE nome LIKE :nome AND id_usuario = :id_user LIMIT 1");
+        $stmtCat->execute([':nome' => '%Cartão%', ':id_user' => $idUsuario]);
+        $idCartao = $stmtCat->fetch(PDO::FETCH_ASSOC)['id'] ?? 0;
 
         try {
-            // Executa desvinculo
-            $stmt1 = $this->conn->prepare($queryDesvincular);
-            $stmt1->execute([':id' => $id]);
-
-            // Executa deleção
-            $stmt2 = $this->conn->prepare($queryDeletar);
-            $stmt2->execute([':id' => $id]);
-
-            return ['success' => true];
-        } catch (PDOException $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    public function getFaturaAberta()
-    {
-        // Ajuste o ID 999 para o ID real da sua categoria Cartão
-        $idCartao = 999;
-
-        // 1. Total da Fatura
-        $sqlTotal = "SELECT COALESCE(SUM(valor), 0) as total 
-                     FROM transacoes 
-                     WHERE id_categoria = :id_cat AND status = 'pendente'";
-
-        // 2. Itens da Fatura
-        $sqlItens = "SELECT * FROM transacoes 
-                     WHERE id_categoria = :id_cat AND status = 'pendente'
-                     ORDER BY data ASC";
-
-        try {
-            $stmtT = $this->conn->prepare($sqlTotal);
-            $stmtT->execute([':id_cat' => $idCartao]);
+            $stmtT = $this->conn->prepare("SELECT COALESCE(SUM(valor), 0) as total FROM transacoes WHERE id_categoria = :id_cat AND status = 'pendente' AND id_usuario = :id_user");
+            $stmtT->execute([':id_cat' => $idCartao, ':id_user' => $idUsuario]);
             $total = $stmtT->fetch(PDO::FETCH_ASSOC)['total'];
 
-            $stmtI = $this->conn->prepare($sqlItens);
-            $stmtI->execute([':id_cat' => $idCartao]);
-            $itens = $stmtI->fetchAll(PDO::FETCH_ASSOC);
-
-            return ['total' => $total, 'itens' => $itens];
+            $stmtI = $this->conn->prepare("SELECT * FROM transacoes WHERE id_categoria = :id_cat AND status = 'pendente' AND id_usuario = :id_user ORDER BY data ASC");
+            $stmtI->execute([':id_cat' => $idCartao, ':id_user' => $idUsuario]);
+            return ['total' => $total, 'itens' => $stmtI->fetchAll(PDO::FETCH_ASSOC)];
         } catch (PDOException $e) {
             return ['total' => 0, 'itens' => []];
         }
     }
 
-    // Paga a fatura: Transforma tudo que é pendente do cartão em PAGO
-    public function pagarFatura()
+    public function pagarFatura($idUsuario)
     {
-        $idCartao = 999; // Mesmo ID de cima
+        $stmtCat = $this->conn->prepare("SELECT id FROM categorias WHERE nome LIKE :nome AND id_usuario = :id_user LIMIT 1");
+        $stmtCat->execute([':nome' => '%Cartão%', ':id_user' => $idUsuario]);
+        $idCartao = $stmtCat->fetch(PDO::FETCH_ASSOC)['id'] ?? 0;
 
-        // Atualiza status para 'pago' e define a data de pagamento para HOJE
-        // Assim você sabe quando o dinheiro saiu da conta de verdade
-        $query = "UPDATE transacoes 
-                  SET status = 'pago' 
-                  WHERE id_categoria = :id_cat AND status = 'pendente'";
-
+        $query = "UPDATE transacoes SET status = 'pago' WHERE id_categoria = :id_cat AND status = 'pendente' AND id_usuario = :id_user";
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([':id_cat' => $idCartao]);
-            return ['success' => true, 'afetados' => $stmt->rowCount()];
+            $stmt->execute([':id_cat' => $idCartao, ':id_user' => $idUsuario]);
+            return ['success' => true];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    // --- COFRINHOS (INVESTIMENTOS) ---
-
-    public function listarCofrinhos()
+    // --- COFRINHOS ---
+    public function listarCofrinhos($idUsuario)
     {
-        $stmt = $this->conn->query("SELECT * FROM cofrinhos ORDER BY id DESC");
+        $stmt = $this->conn->prepare("SELECT * FROM cofrinhos WHERE id_usuario = :id_user ORDER BY id DESC");
+        $stmt->execute([':id_user' => $idUsuario]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function criarCofrinho($nome, $meta, $cor)
+    public function criarCofrinho($nome, $meta, $cor, $idUsuario)
     {
-        $query = "INSERT INTO cofrinhos (nome, meta, saldo_atual, cor_fundo) VALUES (:nome, :meta, 0, :cor)";
+        $query = "INSERT INTO cofrinhos (nome, meta, saldo_atual, cor_fundo, id_usuario) VALUES (:nome, :meta, 0, :cor, :id_user)";
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->execute([':nome' => $nome, ':meta' => $meta, ':cor' => $cor]);
+            $stmt->execute([':nome' => $nome, ':meta' => $meta, ':cor' => $cor, ':id_user' => $idUsuario]);
             return ['success' => true];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    public function movimentarCofrinho($idCofrinho, $valor, $tipo)
+    public function movimentarCofrinho($idCofrinho, $valor, $tipo, $idUsuario)
     {
-        // $tipo: 'deposito' ou 'resgate'
-
         try {
             $this->conn->beginTransaction();
+            $nomeCofre = $this->getNomeCofrinho($idCofrinho, $idUsuario);
 
-            // 1. Atualiza o saldo do Cofrinho
             if ($tipo === 'deposito') {
-                $queryCofre = "UPDATE cofrinhos SET saldo_atual = saldo_atual + :valor WHERE id = :id";
-
-                // 2. Gera a DESPESA no fluxo principal (saiu do caixa, foi pro cofre)
-                $desc = "Aplicação: " . $this->getNomeCofrinho($idCofrinho);
-                $queryTransacao = "INSERT INTO transacoes (descricao, valor, data, tipo, status, observacao) 
-                                   VALUES (:desc, :valor, CURDATE(), 'despesa', 'pago', 'Movimentação automática para Cofrinho')";
-
+                $this->conn->prepare("UPDATE cofrinhos SET saldo_atual = saldo_atual + :valor WHERE id = :id AND id_usuario = :id_user")->execute([':valor' => $valor, ':id' => $idCofrinho, ':id_user' => $idUsuario]);
+                $sqlT = "INSERT INTO transacoes (descricao, valor, data, tipo, status, id_usuario, observacao) VALUES (:desc, :valor, CURDATE(), 'despesa', 'pago', :id_user, 'Aplicação automática')";
             } else {
-                // Resgate
-                $queryCofre = "UPDATE cofrinhos SET saldo_atual = saldo_atual - :valor WHERE id = :id";
-
-                // 2. Gera a RECEITA no fluxo principal (saiu do cofre, voltou pro caixa)
-                $desc = "Resgate: " . $this->getNomeCofrinho($idCofrinho);
-                $queryTransacao = "INSERT INTO transacoes (descricao, valor, data, tipo, status, observacao) 
-                                   VALUES (:desc, :valor, CURDATE(), 'receita', 'pago', 'Resgate automático de Cofrinho')";
+                $this->conn->prepare("UPDATE cofrinhos SET saldo_atual = saldo_atual - :valor WHERE id = :id AND id_usuario = :id_user")->execute([':valor' => $valor, ':id' => $idCofrinho, ':id_user' => $idUsuario]);
+                $sqlT = "INSERT INTO transacoes (descricao, valor, data, tipo, status, id_usuario, observacao) VALUES (:desc, :valor, CURDATE(), 'receita', 'pago', :id_user, 'Resgate automático')";
             }
 
-            // Executa Cofrinho
-            $stmt1 = $this->conn->prepare($queryCofre);
-            $stmt1->execute([':valor' => $valor, ':id' => $idCofrinho]);
-
-            // Executa Transação
-            $stmt2 = $this->conn->prepare($queryTransacao);
-            $stmt2->execute([':desc' => $desc, ':valor' => $valor]);
+            $stmt2 = $this->conn->prepare($sqlT);
+            $stmt2->execute([':desc' => ($tipo === 'deposito' ? "Depósito: $nomeCofre" : "Resgate: $nomeCofre"), ':valor' => $valor, ':id_user' => $idUsuario]);
 
             $this->conn->commit();
             return ['success' => true];
-
         } catch (Exception $e) {
             $this->conn->rollBack();
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
-    private function getNomeCofrinho($id)
+    private function getNomeCofrinho($id, $idUsuario)
     {
-        $stmt = $this->conn->prepare("SELECT nome FROM cofrinhos WHERE id = :id");
-        $stmt->execute([':id' => $id]);
+        $stmt = $this->conn->prepare("SELECT nome FROM cofrinhos WHERE id = :id AND id_usuario = :id_user");
+        $stmt->execute([':id' => $id, ':id_user' => $idUsuario]);
         return $stmt->fetchColumn() ?: 'Cofrinho';
     }
 
-    public function excluirCofrinho($id)
+    public function excluirCofrinho($id, $idUsuario)
     {
-        // Deleta o cofrinho (não apaga as transações históricas do fluxo)
-        $stmt = $this->conn->prepare("DELETE FROM cofrinhos WHERE id = :id");
-        return ['success' => $stmt->execute([':id' => $id])];
+        $stmt = $this->conn->prepare("DELETE FROM cofrinhos WHERE id = :id AND id_usuario = :id_user");
+        return ['success' => $stmt->execute([':id' => $id, ':id_user' => $idUsuario])];
     }
 
-    public function atualizarMetaCofrinho($id, $novaMeta)
+    public function atualizarMetaCofrinho($id, $novaMeta, $idUsuario)
     {
-        $query = "UPDATE cofrinhos SET meta = :meta WHERE id = :id";
-        try {
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute([':meta' => $novaMeta, ':id' => $id]);
-            return ['success' => true];
-        } catch (PDOException $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        $stmt = $this->conn->prepare("UPDATE cofrinhos SET meta = :meta WHERE id = :id AND id_usuario = :id_user");
+        return ['success' => $stmt->execute([':meta' => $novaMeta, ':id' => $id, ':id_user' => $idUsuario])];
     }
 }
-
-

@@ -1,7 +1,7 @@
 <?php
 // index.php
 
-// Força o PHP a não mostrar erros HTML na tela, para não quebrar o JSON
+// 1. Configurações de erro para não quebrar o JSON da API
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
@@ -14,73 +14,92 @@ function enviarErroJSON($mensagem)
     exit();
 }
 
-// Captura erros fatais que escapam do try-catch
+// Captura erros fatais
 register_shutdown_function(function () {
     $error = error_get_last();
     if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE)) {
-        enviarErroJSON("Erro Fatal PHP: " . $error['message'] . " na linha " . $error['line']);
+        enviarErroJSON("Erro Fatal PHP: " . $error['message']);
     }
 });
 
 try {
     date_default_timezone_set('America/Sao_Paulo');
 
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit();
+    // Inicia a sessão de forma segura
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start([
+            'cookie_httponly' => true,
+            'cookie_samesite' => 'Lax',
+        ]);
     }
+
     require_once __DIR__ . '/api/config/env.php';
+    require_once __DIR__ . '/api/controller/PersonalController.php';
+    require_once __DIR__ . '/api/controller/AuthController.php';
 
-    // 1. Tenta carregar o Banco
-    $arqDatabase = __DIR__ . '/api/config/Database.php';
-    if (!file_exists($arqDatabase))
-        throw new Exception("Arquivo de banco não encontrado: $arqDatabase");
-    require_once $arqDatabase;
-
-    // 2. Tenta carregar o Controller
-    $arqController = __DIR__ . '/api/controller/PersonalController.php';
-    if (!file_exists($arqController))
-        throw new Exception("Arquivo de controller não encontrado: $arqController");
-    require_once $arqController;
-
-    // Roteamento
-    $requestMethod = $_SERVER['REQUEST_METHOD'];
-    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-    // Ajuste para subpastas
-    if (strpos($requestUri, '/index.php') === 0) {
-        $requestUri = substr($requestUri, strlen('/index.php'));
-    }
-
-    // Instancia o Controller
-    if (!class_exists('PersonalController')) {
-        throw new Exception("A classe PersonalController não foi encontrada dentro do arquivo.");
-    }
     $personalController = new PersonalController();
+    $authController = new AuthController();
 
-    // Rotas
+    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $requestUri = str_replace('/financeiro_martinelli', '', $requestUri);
+    $requestMethod = $_SERVER['REQUEST_METHOD'];
+
+    // --- PROTEÇÃO DE PRIVACIDADE ---
+
+    // Apenas estas rotas podem ser acedidas sem login
+    // 1. Verificar se é um arquivo físico na pasta public (CSS, JS, Imagens, Favicon)
+    // 1. Identificar se é um arquivo físico (CSS, JS, Imagens)
+    // Procuramos o arquivo dentro da pasta /public/ do projeto
+    $arquivoCaminho = __DIR__ . '/public' . str_replace('/public', '', $requestUri);
+    $ehArquivoFisico = file_exists($arquivoCaminho) && is_file($arquivoCaminho);
+
+    // 2. Rotas que não precisam de login
+    $rotasPublicas = ['/api/login', '/login.html'];
+    $ehPublica = in_array($requestUri, $rotasPublicas);
+
+    // SE não for arquivo físico E não for rota pública E não estiver logado -> BLOQUEIA
+    if (!$ehArquivoFisico && !$ehPublica && !isset($_SESSION['usuario_id'])) {
+        if (strpos($requestUri, '/api/') !== false) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Sessão expirada.']);
+            exit;
+        } else {
+            header('Location: /financeiro_martinelli/login.html');
+            exit;
+        }
+    }
+
+    // --- ROTEAMENTO DO SISTEMA ---
+
     switch (true) {
-        // Rota Frontend
-        case $requestUri === '/' || $requestUri === '' || strpos($requestUri, '/index.html') !== false:
+        // Rota Raiz ou index.html (Protegido pelo check acima)
+        case ($requestUri === '/' || $requestUri === '/index.html'):
             $arquivoInicio = __DIR__ . '/public/index.html';
             if (file_exists($arquivoInicio)) {
                 header('Content-Type: text/html; charset=UTF-8');
                 readfile($arquivoInicio);
-            } else {
-                echo "Arquivo frontend não encontrado em: $arquivoInicio";
             }
-            exit();
+            break;
 
-        case strpos($requestUri, '/api/dashboard') !== false:
+        // AUTH API
+        case ($requestUri === '/api/login'):
+            if ($requestMethod === 'POST')
+                $authController->login();
+            break;
+
+        case ($requestUri === '/api/logout'):
+            if ($requestMethod === 'POST')
+                $authController->logout();
+            break;
+
+        // DASHBOARD & TRANSAÇÕES
+        case ($requestUri === '/api/dashboard'):
             if ($requestMethod === 'GET')
                 $personalController->getDashboard();
             break;
 
-        case strpos($requestUri, '/api/transacoes') !== false && !preg_match('/\/api\/transacoes\/\d+/', $requestUri):
+        case ($requestUri === '/api/transacoes'):
             if ($requestMethod === 'GET')
                 $personalController->listarTransacoes();
             elseif ($requestMethod === 'POST')
@@ -89,87 +108,57 @@ try {
 
         case preg_match('/\/api\/transacoes\/(\d+)$/', $requestUri, $matches):
             $id = $matches[1];
-            if ($requestMethod === 'PUT')
-                $personalController->editarTransacao($id);
-            elseif ($requestMethod === 'DELETE')
+            if ($requestMethod === 'DELETE')
                 $personalController->excluirTransacao($id);
+            elseif ($requestMethod === 'PUT')
+                $personalController->editarTransacao($id);
             break;
 
-        case strpos($requestUri, '/api/categorias') !== false:
+        // CATEGORIAS
+        case ($requestUri === '/api/categorias'):
             if ($requestMethod === 'GET')
                 $personalController->listarCategorias();
             elseif ($requestMethod === 'POST')
-                $personalController->criarCategoria();
+                $personalController->salvarCategoria();
             break;
 
-        case strpos($requestUri, '/api/status') !== false:
-            echo json_encode(['status' => 'ok']);
-            break;
-
-        case strpos($requestUri, '/api/categorias') !== false && !preg_match('/\/api\/categorias\/\d+/', $requestUri):
-            if ($requestMethod === 'GET') {
-                $personalController->listarCategorias();
-            } elseif ($requestMethod === 'POST') {
-                $personalController->criarCategoria();
-            }
-            break;
-
-        // --- CATEGORIAS (Editar e Excluir por ID) ---
-        case preg_match('/\/api\/categorias\/(\d+)$/', $requestUri, $matches):
-            $id = $matches[1];
-            if ($requestMethod === 'PUT') {
-                $personalController->editarCategoria($id);
-            } elseif ($requestMethod === 'DELETE') {
-                $personalController->excluirCategoria($id);
-            }
-            break;
-
-        case strpos($requestUri, '/api/cartao/pagar') !== false:
-            if ($requestMethod === 'POST')
-                $personalController->pagarFatura();
-            break;
-
-        case strpos($requestUri, '/api/cartao') !== false:
-            if ($requestMethod === 'GET')
-                $personalController->getDadosCartao();
-            break;
-
-        case strpos($requestUri, '/api/cofrinhos/movimentar') !== false:
-            if ($requestMethod === 'POST')
-                $personalController->movimentarCofrinho();
-            break;
-
-        case strpos($requestUri, '/api/cofrinhos') !== false && !preg_match('/\/api\/cofrinhos\/\d+/', $requestUri):
+        // COFRINHOS
+        case ($requestUri === '/api/cofrinhos'):
             if ($requestMethod === 'GET')
                 $personalController->listarCofrinhos();
             elseif ($requestMethod === 'POST')
                 $personalController->criarCofrinho();
             break;
 
+        case ($requestUri === '/api/cofrinhos/movimentar'):
+            if ($requestMethod === 'POST')
+                $personalController->movimentarCofrinho();
+            break;
+
         case preg_match('/\/api\/cofrinhos\/(\d+)$/', $requestUri, $matches):
-            $id = $matches[1];
             if ($requestMethod === 'DELETE')
-                $personalController->excluirCofrinho($id);
+                $personalController->excluirCofrinho($matches[1]);
             break;
 
         case preg_match('/^\/api\/cofrinhos\/(\d+)\/meta$/', $requestUri, $matches):
-            if ($requestMethod === 'PUT') {
+            if ($requestMethod === 'PUT')
                 $personalController->editarMetaCofrinho($matches[1]);
-            }
             break;
 
+        // GESTÃO DE ARQUIVOS ESTÁTICOS & 404
         default:
-            // Se chegou aqui e não é o frontend, é 404 API
             if (strpos($requestUri, '/api/') !== false) {
                 header('Content-Type: application/json');
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Rota não encontrada: ' . $requestUri]);
+                echo json_encode(['success' => false, 'message' => 'Rota não encontrada.']);
             } else {
-                // Tenta carregar o front de novo caso a URL esteja estranha
-                $arquivoInicio = __DIR__ . '/public/index.html';
-                if (file_exists($arquivoInicio)) {
-                    header('Content-Type: text/html; charset=UTF-8');
-                    readfile($arquivoInicio);
+                // Tenta servir arquivos da pasta public (CSS, JS, Imagens)
+                $arquivoCaminho = __DIR__ . '/public' . $requestUri;
+                if (file_exists($arquivoCaminho) && is_file($arquivoCaminho)) {
+                    readfile($arquivoCaminho);
+                } else {
+                    // Se nada for encontrado, volta para o login ou home conforme o estado
+                    header('Location: /financeiro_martinelli/login.html');
                 }
             }
             break;
@@ -178,4 +167,3 @@ try {
 } catch (Exception $e) {
     enviarErroJSON($e->getMessage());
 }
-?>
