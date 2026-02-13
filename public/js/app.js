@@ -366,22 +366,33 @@ async function salvarTransacao(e) {
     if (res && res.success) {
         fecharModalTransacao();
         carregarDashboard();
+        notificar("Transação salva com sucesso!", "sucesso");
     } else {
-        alert("Erro ao salvar: " + (res.message || 'Desconhecido'));
+        notificar(res.message || "Erro ao salvar.", "erro");
     }
 }
 
 window.excluirTransacao = async function (id) {
-    if (!confirm("Tem certeza que deseja apagar?")) return;
+    // ANTIGO: if (!confirm("Tem certeza que deseja apagar?")) return;
+
+    // NOVO:
+    const confirmou = await confirmarAcao(
+        "Excluir Transação",
+        "Você tem certeza que deseja apagar este registro? Isso não pode ser desfeito."
+    );
+
+    if (!confirmou) return;
 
     toggleLoader(true);
     const res = await fetchAPI(`/transacoes/${id}`, { method: 'DELETE' });
     toggleLoader(false);
 
     if (res && res.success) {
+        // ANTIGO: alert("Sucesso");
+        notificar("Transação excluída com sucesso!", "sucesso");
         carregarDashboard();
     } else {
-        alert("Erro ao excluir");
+        notificar("Erro ao excluir transação.", "erro");
     }
 }
 
@@ -445,8 +456,24 @@ function renderizarListaCategorias(filtro = 'all') {
         return;
     }
 
+
     itens.forEach(cat => {
         const corTipo = cat.tipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+
+        // VERIFICAÇÃO: Se id_usuario for null, é do sistema
+        const isSistema = (cat.id_usuario === null);
+
+        // Se for do sistema, mostramos um cadeado ou badge, senão mostramos os botões
+        const acoesHtml = isSistema
+            ? `<span class="text-xs text-gray-400 italic flex items-center gap-1"><i class="ph ph-lock"></i> Padrão</span>`
+            : `<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick='prepararEdicaoCategoria(${JSON.stringify(cat)})' class="p-1.5 text-blue-600 hover:bg-blue-100 rounded">
+                    <i class="ph ph-pencil-simple"></i>
+                </button>
+                <button onclick="excluirCategoria(${cat.id})" class="p-1.5 text-red-600 hover:bg-red-100 rounded">
+                    <i class="ph ph-trash"></i>
+                </button>
+               </div>`;
 
         const div = document.createElement('div');
         div.className = "flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-300 transition group";
@@ -456,14 +483,7 @@ function renderizarListaCategorias(filtro = 'all') {
                 <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded ${corTipo}">${cat.tipo}</span>
                 <span class="text-sm font-semibold text-gray-700">${cat.nome}</span>
             </div>
-            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick='prepararEdicaoCategoria(${JSON.stringify(cat)})' class="p-1.5 text-blue-600 hover:bg-blue-100 rounded">
-                    <i class="ph ph-pencil-simple"></i>
-                </button>
-                <button onclick="excluirCategoria(${cat.id})" class="p-1.5 text-red-600 hover:bg-red-100 rounded">
-                    <i class="ph ph-trash"></i>
-                </button>
-            </div>
+            ${acoesHtml}
         `;
         listaEl.appendChild(div);
     });
@@ -622,21 +642,28 @@ async function carregarDadosCartao() {
 async function pagarFatura() {
     const valorTexto = document.getElementById('faturaValor').textContent;
     if (valorTexto === 'R$ 0,00') {
-        alert("A fatura já está zerada.");
+        notificar("A fatura já está zerada.", "info");
         return;
     }
 
-    if (!confirm(`Confirma o pagamento da fatura no valor de ${valorTexto}? Isso marcará todas as compras como 'Pagas'.`)) return;
+    const confirmou = await confirmarAcao(
+        "Pagar Fatura",
+        `Deseja pagar a fatura de ${valorTexto}? Todas as compras serão marcadas como pagas.`,
+        "Pagar Agora",
+        "bg-purple-600" // Posso mudar a cor do botão aqui
+    );
+
+    if (!confirmou) return;
 
     toggleLoader(true);
     const res = await fetchAPI('/cartao/pagar', { method: 'POST' });
     toggleLoader(false);
 
     if (res && res.success) {
-        alert("Fatura paga com sucesso!");
-        carregarDadosCartao(); // Atualiza a tela (deve zerar)
+        notificar("Fatura paga com sucesso!", "sucesso");
+        carregarDadosCartao();
     } else {
-        alert("Erro ao pagar fatura.");
+        notificar("Erro ao pagar fatura.", "erro");
     }
 }
 
@@ -773,9 +800,11 @@ async function confirmarMovimentacaoCofrinho() {
     if (res && res.success) {
         document.getElementById('modalMovCofrinho').classList.add('hidden');
         carregarCofrinhos();
-        alert(tipo === 'deposito' ? 'Dinheiro guardado!' : 'Dinheiro resgatado!');
+        carregarDashboard();
+        notificar(tipo === 'deposito' ? 'Dinheiro guardado!' : 'Dinheiro resgatado!', 'sucesso');
     } else {
-        alert("Erro na operação.");
+        // Mostra o erro bonito (ex: Saldo insuficiente)
+        notificar(res.message, "erro");
     }
 }
 
@@ -792,22 +821,21 @@ function abrirDetalhesCofre(cofreString) {
     const meta = parseFloat(c.meta);
     let porcentagem = meta > 0 ? (saldo / meta) * 100 : 0;
     if (porcentagem > 100) porcentagem = 100;
-
     const falta = meta - saldo;
 
-    // Preenche Modal
+    // Preenche IDs
     document.getElementById('idCofreDetalhe').value = c.id;
-    document.getElementById('detalheNomeCofre').textContent = c.nome;
 
-    // Atualiza cores do header e da barra baseado na cor do cofre
+    // AGORA PREENCHE O INPUT DO NOME, NÃO O H2
+    document.getElementById('detalheNomeCofreInput').value = c.nome;
+
+    // Atualiza cores
     const header = document.getElementById('headerDetalheCofre');
     const bar = document.getElementById('barDetalheCofre');
 
-    // Remove classes antigas de cor (bg-*)
     header.className = header.className.replace(/bg-\w+-\d+/g, '');
     bar.className = bar.className.replace(/bg-\w+-\d+/g, '');
 
-    // Adiciona nova cor
     header.classList.add(c.cor_fundo);
     bar.classList.add(c.cor_fundo);
 
@@ -818,53 +846,84 @@ function abrirDetalhesCofre(cofreString) {
     // Barra
     bar.style.width = `${porcentagem}%`;
     document.getElementById('detalhePorcentagem').textContent = `${porcentagem.toFixed(1)}%`;
-    document.getElementById('detalhePorcentagem').className = `text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-600`; // Reset cor texto
 
     // Texto de quanto falta
     const elFalta = document.getElementById('detalheFalta');
     if (falta > 0) {
         elFalta.textContent = `Faltam ${falta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para a meta!`;
-        elFalta.classList.remove('text-green-600');
-        elFalta.classList.add('text-gray-500');
+        elFalta.className = 'text-sm text-gray-500 font-medium';
     } else {
         elFalta.textContent = "Parabéns! Meta atingida! 🎉";
-        elFalta.classList.remove('text-gray-500');
-        elFalta.classList.add('text-green-600', 'font-bold');
+        elFalta.className = 'text-sm text-green-600 font-bold';
     }
 
-    // Input de Edição
+    // Input de Edição da Meta
     document.getElementById('novaMetaInput').value = meta;
 
     document.getElementById('modalDetalhesCofre').classList.remove('hidden');
 }
 
 // Listener para salvar a meta
-document.getElementById('formEditarMeta').addEventListener('submit', async (e) => {
-    e.preventDefault();
+const formEdit = document.getElementById('formEditarCofre') || document.getElementById('formEditarMeta');
+if (formEdit) {
+    formEdit.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
+        const id = document.getElementById('idCofreDetalhe').value;
+        const novaMeta = document.getElementById('novaMetaInput').value;
+
+        // PEGA O NOVO NOME TAMBÉM
+        const novoNome = document.getElementById('detalheNomeCofreInput').value;
+
+        if (novaMeta < 0) {
+            alert("A meta não pode ser negativa.");
+            return;
+        }
+        if (!novoNome.trim()) {
+            alert("O nome não pode ser vazio.");
+            return;
+        }
+
+        toggleLoader(true);
+
+        // MUDAMOS A URL PARA A RAIZ DO ID (PUT)
+        const res = await fetchAPI(`/cofrinhos/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ nome: novoNome, meta: novaMeta })
+        });
+
+        toggleLoader(false);
+
+        if (res && res.success) {
+            document.getElementById('modalDetalhesCofre').classList.add('hidden');
+            carregarCofrinhos();
+            alert("Caixinha atualizada com sucesso!");
+        } else {
+            alert("Erro ao atualizar: " + (res.message || "Erro desconhecido"));
+        }
+    });
+}
+
+async function excluirCofrePeloModal() {
     const id = document.getElementById('idCofreDetalhe').value;
-    const novaMeta = document.getElementById('novaMetaInput').value;
+    const saldoTexto = document.getElementById('detalheSaldoCofre').textContent;
 
-    if (novaMeta < 0) {
-        alert("A meta não pode ser negativa.");
-        return;
-    }
+    // Mensagem mais amigável avisando do estorno
+    if (!confirm(`Tem certeza que deseja excluir esta caixinha?\n\nO saldo atual (${saldoTexto}) será devolvido para sua conta principal.`)) return;
 
     toggleLoader(true);
-    const res = await fetchAPI(`/cofrinhos/${id}/meta`, {
-        method: 'PUT',
-        body: JSON.stringify({ meta: novaMeta })
-    });
+    const res = await fetchAPI(`/cofrinhos/${id}`, { method: 'DELETE' });
     toggleLoader(false);
 
     if (res && res.success) {
         document.getElementById('modalDetalhesCofre').classList.add('hidden');
-        carregarCofrinhos(); // Recarrega a lista para atualizar os dados
-        alert("Meta atualizada com sucesso!");
+        carregarCofrinhos();
+        carregarDashboard(); // Importante atualizar o saldo principal
+        alert("Caixinha excluída e saldo estornado para a conta!");
     } else {
-        alert("Erro ao atualizar meta: " + (res.message || "Erro desconhecido"));
+        alert("Erro ao excluir: " + (res.message || "Erro desconhecido"));
     }
-});
+}
 
 async function logout() {
     if (!confirm("Deseja realmente encerrar sua sessão?")) return;
@@ -882,6 +941,96 @@ async function logout() {
         console.error('Erro ao sair:', error);
         alert('Não foi possível encerrar a sessão.');
     }
+}
+
+function notificar(mensagem, tipo = 'sucesso') {
+    const container = document.getElementById('toast-container');
+
+    // Configuração de cores baseada no tipo
+    const config = {
+        sucesso: { icone: 'ph-check-circle', cor: 'bg-green-500', titulo: 'Sucesso' },
+        erro: { icone: 'ph-x-circle', cor: 'bg-red-500', titulo: 'Erro' },
+        info: { icone: 'ph-info', cor: 'bg-blue-500', titulo: 'Informação' },
+        aviso: { icone: 'ph-warning', cor: 'bg-yellow-500', titulo: 'Atenção' }
+    }[tipo];
+
+    // Cria o elemento HTML
+    const toast = document.createElement('div');
+    toast.className = `pointer-events-auto flex items-center w-full max-w-xs p-4 mb-4 text-white rounded-xl shadow-lg transform transition-all duration-300 translate-x-full opacity-0 ${config.cor}`;
+
+    toast.innerHTML = `
+        <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-white bg-white/20 rounded-lg">
+            <i class="ph ${config.icone} text-xl"></i>
+        </div>
+        <div class="ml-3 text-sm font-bold">${mensagem}</div>
+        <button type="button" class="ml-auto -mx-1.5 -my-1.5 bg-transparent text-white rounded-lg focus:ring-2 focus:ring-white/50 p-1.5 hover:bg-white/20 inline-flex h-8 w-8" onclick="this.parentElement.remove()">
+            <i class="ph ph-x"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+
+    // Animação de entrada
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-x-full', 'opacity-0');
+    });
+
+    // Remove automaticamente após 4 segundos
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => {
+            if (toast.parentElement) toast.remove();
+        }, 300);
+    }, 4000);
+}
+
+function confirmarAcao(titulo, mensagem, textoBotao = 'Sim, confirmar', corBotao = 'bg-red-600') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modalConfirmacao');
+        const content = document.getElementById('modalConfirmacaoContent');
+        const tituloEl = document.getElementById('confirmTitulo');
+        const msgEl = document.getElementById('confirmMensagem');
+        const btnSim = document.getElementById('btnConfirmarSim');
+        const btnNao = document.getElementById('btnConfirmarNao');
+
+        // Configura textos
+        tituloEl.textContent = titulo;
+        msgEl.textContent = mensagem;
+        btnSim.textContent = textoBotao;
+
+        // Ajusta cor do botão de confirmação
+        btnSim.className = `flex-1 text-white text-sm font-bold py-2 rounded-lg shadow-lg transition hover:brightness-90 ${corBotao}`;
+
+        // Exibe o modal
+        modal.classList.remove('hidden');
+        // Pequeno delay para permitir a transição CSS
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }, 10);
+
+        // Função de limpeza
+        const fechar = (resultado) => {
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                resolve(resultado); // Retorna true ou false
+            }, 300);
+        };
+
+        // Remove listeners antigos para não acumular
+        const novoBtnSim = btnSim.cloneNode(true);
+        const novoBtnNao = btnNao.cloneNode(true);
+        btnSim.parentNode.replaceChild(novoBtnSim, btnSim);
+        btnNao.parentNode.replaceChild(novoBtnNao, btnNao);
+
+        // Adiciona novos listeners
+        novoBtnSim.addEventListener('click', () => fechar(true));
+        novoBtnNao.addEventListener('click', () => fechar(false));
+    });
 }
 
 

@@ -178,11 +178,18 @@ class PersonalController
         $this->jsonResponse($res);
     }
 
-    public function editarMetaCofrinho($id)
+    public function editarCofrinho($id)
     {
         $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
-        $res = $this->model->atualizarMetaCofrinho($id, $input['meta'], $idUsuario);
+
+        // Verifica se veio nome e meta
+        if (empty($input['nome']) || !isset($input['meta'])) {
+            $this->jsonResponse(['success' => false, 'message' => 'Nome e Meta são obrigatórios'], 400);
+        }
+
+        // Chama o método atualizado do Model
+        $res = $this->model->atualizarCofrinho($id, $input['nome'], $input['meta'], $idUsuario);
         $this->jsonResponse($res);
     }
 }

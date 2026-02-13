@@ -145,14 +145,16 @@ try {
                 $personalController->movimentarCofrinho();
             break;
 
-        case preg_match('/\/api\/cofrinhos\/(\d+)$/', $requestUri, $matches):
-            if ($requestMethod === 'DELETE')
-                $personalController->excluirCofrinho($matches[1]);
-            break;
+      
 
-        case preg_match('/^\/api\/cofrinhos\/(\d+)\/meta$/', $requestUri, $matches):
-            if ($requestMethod === 'PUT')
-                $personalController->editarMetaCofrinho($matches[1]);
+        case preg_match('/^\/api\/cofrinhos\/(\d+)$/', $requestUri, $matches):
+            $id = $matches[1];
+            if ($requestMethod === 'DELETE') {
+                $personalController->excluirCofrinho($id);
+            } elseif ($requestMethod === 'PUT') {
+                // Agora o PUT na raiz do ID chama a edição geral
+                $personalController->editarCofrinho($id);
+            }
             break;
 
 

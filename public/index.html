@@ -478,14 +478,20 @@
         class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-opacity">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
 
-            <div id="headerDetalheCofre" class="bg-blue-600 p-6 text-white text-center relative">
+            <div id="headerDetalheCofre"
+                class="bg-blue-600 p-6 text-white text-center relative transition-colors duration-300">
                 <button onclick="document.getElementById('modalDetalhesCofre').classList.add('hidden')"
                     class="absolute top-4 right-4 text-white/70 hover:text-white transition">
                     <i class="ph ph-x text-2xl"></i>
                 </button>
+
                 <i class="ph ph-piggy-bank text-5xl mb-2 opacity-90"></i>
-                <h2 class="text-2xl font-bold" id="detalheNomeCofre">Nome do Cofrinho</h2>
-                <p class="text-white/80 text-sm">Detalhes do Objetivo</p>
+
+                <input type="text" id="detalheNomeCofreInput"
+                    class="block w-full text-center bg-transparent border-b border-white/30 text-2xl font-bold text-white placeholder-white/50 focus:outline-none focus:border-white transition mb-1 pb-1"
+                    placeholder="Nome do Objetivo">
+
+                <p class="text-white/80 text-sm">Detalhes e Configurações</p>
             </div>
 
             <div class="p-8">
@@ -517,22 +523,35 @@
                 <hr class="border-gray-100 mb-6">
 
                 <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <i class="ph ph-pencil-simple text-blue-600"></i> Ajustar Meta
+                    <i class="ph ph-gear text-blue-600"></i> Ajustar Meta & Dados
                 </h3>
 
-                <form id="formEditarMeta" class="flex gap-2">
+                <form id="formEditarCofre" class="flex flex-col gap-4">
                     <input type="hidden" id="idCofreDetalhe">
-                    <div class="relative flex-1">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">R$</span>
-                        <input type="number" id="novaMetaInput" step="0.01"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-8 pr-4 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition"
-                            placeholder="0.00">
+
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Nova Meta (R$)</label>
+                        <div class="relative">
+                            <span
+                                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">R$</span>
+                            <input type="number" id="novaMetaInput" step="0.01"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-8 pr-4 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                placeholder="0.00">
+                        </div>
                     </div>
+
                     <button type="submit"
-                        class="bg-gray-900 hover:bg-black text-white px-4 rounded-xl font-bold transition shadow-lg">
-                        Salvar
+                        class="w-full bg-gray-900 hover:bg-black text-white py-3 rounded-xl font-bold transition shadow-lg flex justify-center items-center gap-2">
+                        <i class="ph ph-check-circle text-lg"></i> Salvar Alterações
                     </button>
                 </form>
+
+                <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+                    <button onclick="excluirCofrePeloModal()"
+                        class="text-red-500 hover:text-red-700 text-sm font-bold flex items-center justify-center gap-1 mx-auto transition">
+                        <i class="ph ph-trash"></i> Excluir esta Caixinha
+                    </button>
+                </div>
 
             </div>
         </div>
@@ -542,6 +561,34 @@
         <div class="flex flex-col items-center">
             <i class="ph ph-spinner animate-spin text-4xl text-blue-600 mb-2"></i>
             <span class="text-sm font-bold text-gray-500">Processando...</span>
+        </div>
+    </div>
+
+    <div id="toast-container"
+        class="fixed top-5 right-5 z-[70] flex flex-col gap-2 w-full max-w-xs pointer-events-none">
+    </div>
+
+    <div id="modalConfirmacao"
+        class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 transition-transform duration-300"
+            id="modalConfirmacaoContent">
+            <div class="p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <i class="ph ph-warning text-2xl text-red-600"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900" id="confirmTitulo">Tem certeza?</h3>
+                <p class="text-sm text-gray-500 mt-2" id="confirmMensagem">Essa ação não poderá ser desfeita.</p>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 flex gap-3 flex-row-reverse">
+                <button id="btnConfirmarSim"
+                    class="flex-1 bg-red-600 text-white text-sm font-bold py-2 rounded-lg hover:bg-red-700 shadow-lg transition">
+                    Sim, confirmar
+                </button>
+                <button id="btnConfirmarNao"
+                    class="flex-1 bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2 rounded-lg hover:bg-gray-50 transition">
+                    Cancelar
+                </button>
+            </div>
         </div>
     </div>
 
