@@ -7,9 +7,11 @@ EXPOSE 80
 
 # Enviamos tanto DB_USER quanto DB_USERNAME para não ter erro no seu PHP
 CMD echo "DB_CONNECTION=${DB_CONNECTION}" > /var/www/html/.env && \
-    echo "DB_HOST=${DB_HOST}" >> /var/www/html/.env && \
+    echo "DB_HOST=${DB_HOST}" >> /var/vew/html/.env && \
     echo "DB_PORT=${DB_PORT}" >> /var/www/html/.env && \
     echo "DB_DATABASE=${DB_DATABASE}" >> /var/www/html/.env && \
+    echo "DB_NAME=${DB_DATABASE}" >> /var/www/html/.env && \
+    echo "MYSQL_DATABASE=${DB_DATABASE}" >> /var/www/html/.env && \
     echo "DB_USERNAME=${DB_USERNAME}" >> /var/www/html/.env && \
     echo "DB_USER=${DB_USERNAME}" >> /var/www/html/.env && \
     echo "DB_PASSWORD=${DB_PASSWORD}" >> /var/www/html/.env && \
