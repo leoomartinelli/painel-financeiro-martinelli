@@ -106,6 +106,16 @@ try {
                 $personalController->salvarTransacao();
             break;
 
+        case ($requestUri === '/api/cartao'):
+            if ($requestMethod === 'GET')
+                $personalController->getDadosCartao();
+            break;
+
+        case ($requestUri === '/api/cartao/pagar'):
+            if ($requestMethod === 'POST')
+                $personalController->pagarFatura();
+            break;
+
         case preg_match('/\/api\/transacoes\/(\d+)$/', $requestUri, $matches):
             $id = $matches[1];
             if ($requestMethod === 'DELETE')
@@ -145,7 +155,7 @@ try {
                 $personalController->editarMetaCofrinho($matches[1]);
             break;
 
-            
+
 
         // GESTÃO DE ARQUIVOS ESTÁTICOS & 404
         default:
