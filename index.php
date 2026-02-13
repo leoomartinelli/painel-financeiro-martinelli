@@ -93,11 +93,6 @@ try {
                 $authController->logout();
             break;
 
-        case '/api/cartao':
-            if ($requestMethod === 'GET')
-                $personalController->getDadosCartao();
-            break;
-
         // DASHBOARD & TRANSAÇÕES
         case ($requestUri === '/api/dashboard'):
             if ($requestMethod === 'GET')
@@ -150,7 +145,7 @@ try {
                 $personalController->editarMetaCofrinho($matches[1]);
             break;
 
-
+            
 
         // GESTÃO DE ARQUIVOS ESTÁTICOS & 404
         default:
