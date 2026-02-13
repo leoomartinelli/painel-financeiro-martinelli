@@ -10,6 +10,5 @@ RUN chown -R www-data:www-data /var/www/html/ && chmod -R 755 /var/www/html/
 
 EXPOSE 80
 
-# O PULO DO GATO: Assim que o container ligar, ele joga as variáveis 
-# do Easypanel direto no arquivo .env e depois inicia o servidor web.
-CMD env > /var/www/html/.env && chown www-data:www-data /var/www/html/.env && apache2-foreground
+# O PULO DO GATO 2.0: Pega as variáveis, coloca aspas em tudo para não quebrar, e liga o servidor
+CMD printenv | sed 's/=\(.*\)/="\1"/' > /var/www/html/.env && chown www-data:www-data /var/www/html/.env && apache2-foreground
