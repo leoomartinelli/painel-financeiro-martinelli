@@ -145,6 +145,11 @@ try {
                 $personalController->editarMetaCofrinho($matches[1]);
             break;
 
+        case '/api/cartao':
+            if ($requestMethod === 'GET')
+                $personalController->getDadosCartao();
+            break;
+
         // GESTÃO DE ARQUIVOS ESTÁTICOS & 404
         default:
             if (strpos($requestUri, '/api/') !== false) {
