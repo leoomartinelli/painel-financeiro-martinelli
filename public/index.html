@@ -304,110 +304,146 @@
         </div>
 
         <div id="modalNovoCofrinho"
-            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-                <h3 class="text-lg font-bold mb-4">Criar Nova Caixinha</h3>
-                <form id="formCofrinho" class="space-y-4">
+            class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
+            <div
+                class="bg-white w-full sm:w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 animate-fade-in-up">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900">Nova Caixinha</h3>
+                    <button onclick="document.getElementById('modalNovoCofrinho').classList.add('hidden')"
+                        class="bg-gray-100 p-2 rounded-full text-gray-500">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+
+                <form id="formCofrinho" class="space-y-5">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Objetivo</label>
-                        <input type="text" id="cofreNome" placeholder="Ex: Viagem, Carro Novo..."
-                            class="w-full border border-gray-300 rounded-lg p-2">
+                        <input type="text" id="cofreNome" placeholder="Ex: Viagem..."
+                            class="w-full border border-gray-300 rounded-xl p-3 text-lg outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Meta (R$)</label>
                         <input type="number" id="cofreMeta" step="0.01" placeholder="0.00"
-                            class="w-full border border-gray-300 rounded-lg p-2">
+                            class="w-full border border-gray-300 rounded-xl p-3 text-lg outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cor do Card</label>
-                        <div class="flex gap-2 flex-wrap">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Cor do Card</label>
+                        <div class="flex justify-between gap-2">
                             <div onclick="selectCorCofre('bg-blue-600')"
-                                class="w-8 h-8 rounded-full bg-blue-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-blue-600 transition sel-cor">
+                                class="w-10 h-10 rounded-full bg-blue-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-blue-600 transition sel-cor">
                             </div>
                             <div onclick="selectCorCofre('bg-purple-600')"
-                                class="w-8 h-8 rounded-full bg-purple-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-purple-600 transition sel-cor">
+                                class="w-10 h-10 rounded-full bg-purple-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-purple-600 transition sel-cor">
                             </div>
                             <div onclick="selectCorCofre('bg-green-600')"
-                                class="w-8 h-8 rounded-full bg-green-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-green-600 transition sel-cor">
+                                class="w-10 h-10 rounded-full bg-green-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-green-600 transition sel-cor">
                             </div>
                             <div onclick="selectCorCofre('bg-pink-600')"
-                                class="w-8 h-8 rounded-full bg-pink-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-pink-600 transition sel-cor">
+                                class="w-10 h-10 rounded-full bg-pink-600 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-pink-600 transition sel-cor">
                             </div>
                             <div onclick="selectCorCofre('bg-orange-500')"
-                                class="w-8 h-8 rounded-full bg-orange-500 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-orange-500 transition sel-cor">
+                                class="w-10 h-10 rounded-full bg-orange-500 cursor-pointer ring-2 ring-offset-2 ring-transparent hover:ring-orange-500 transition sel-cor">
                             </div>
                         </div>
                         <input type="hidden" id="cofreCor" value="bg-blue-600">
                     </div>
                     <button type="submit"
-                        class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Criar</button>
+                        class="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black text-lg shadow-lg">Criar
+                        Caixinha</button>
                 </form>
-                <button onclick="document.getElementById('modalNovoCofrinho').classList.add('hidden')"
-                    class="w-full mt-2 text-gray-500 text-sm hover:underline">Cancelar</button>
             </div>
         </div>
 
         <div id="modalFixas"
-            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 transition-opacity">
+
             <div
-                class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] md:h-[600px] flex flex-col md:flex-row overflow-hidden">
+                class="bg-white w-full h-full sm:h-[650px] sm:max-w-5xl sm:rounded-2xl shadow-2xl flex flex-col sm:flex-row overflow-hidden">
+
+                <button onclick="document.getElementById('modalFixas').classList.add('hidden')"
+                    class="sm:hidden absolute top-4 right-4 z-20 bg-gray-100 p-2 rounded-full text-gray-600 shadow-sm">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+
                 <div
-                    class="w-full md:w-1/3 bg-gray-50 p-6 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col overflow-y-auto">
-                    <div class="flex justify-between md:block">
-                        <h3 class="text-lg font-bold text-gray-900 mb-4">Nova Regra</h3>
-                        <button onclick="document.getElementById('modalFixas').classList.add('hidden')"
-                            class="md:hidden text-gray-400"><i class="ph ph-x text-xl"></i></button>
-                    </div>
+                    class="w-full sm:w-1/3 bg-gray-50 p-6 border-b sm:border-b-0 sm:border-r border-gray-200 flex flex-col shrink-0 overflow-y-auto max-h-[60vh] sm:max-h-full">
+
+                    <h3 class="text-xl font-bold text-gray-900 mb-2 mt-2 sm:mt-0">Nova Regra Fixa</h3>
+                    <p class="text-xs text-gray-500 mb-6 leading-relaxed">
+                        Isso criará uma transação pendente automaticamente todo mês.
+                    </p>
+
                     <form id="formFixa" class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição</label>
-                            <input type="text" id="fixaDesc" required placeholder="Ex: Internet..."
-                                class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                            <input type="text" id="fixaDesc" required placeholder="Ex: Aluguel, Internet..."
+                                class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition">
                         </div>
+
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Valor (R$)</label>
                             <input type="number" id="fixaValor" step="0.01" required placeholder="0.00"
-                                class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition font-bold text-gray-700">
                         </div>
-                        <div class="bg-gray-100 p-3 rounded-lg border border-gray-200">
-                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Repetir meses</label>
-                            <input type="number" id="fixaLimite" min="1" placeholder="Vazio = Sempre"
-                                class="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm">
+
+                        <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Duração (Meses)</label>
+                            <input type="number" id="fixaLimite" min="1" placeholder="Deixe vazio para 'Sempre'"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-purple-500 placeholder-gray-400">
+                            <p class="text-[10px] text-gray-400 mt-1 flex gap-1">
+                                <i class="ph ph-info text-purple-500"></i> Ex: <strong>12</strong> para um ano.
+                            </p>
                         </div>
+
                         <div class="flex gap-3">
                             <div class="flex-1">
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dia</label>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dia Venc.</label>
                                 <input type="number" id="fixaDia" min="1" max="31" required placeholder="Dia"
-                                    class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                                    class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-purple-500 bg-white">
                             </div>
                             <div class="flex-1">
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
                                 <select id="fixaTipo"
-                                    class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
+                                    class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-purple-500 bg-white">
                                     <option value="despesa">Despesa</option>
                                     <option value="receita">Receita</option>
                                 </select>
                             </div>
                         </div>
+
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Categoria</label>
                             <select id="fixaCategoria"
-                                class="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white">
+                                class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-purple-500 bg-white">
                                 <option value="">Carregando...</option>
                             </select>
                         </div>
+
                         <button type="submit"
-                            class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg text-sm shadow-md mt-2">Criar
-                            Regra</button>
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl transition text-sm shadow-md mt-2 flex justify-center items-center gap-2">
+                            <i class="ph ph-plus-circle text-lg"></i> Criar Regra
+                        </button>
                     </form>
                 </div>
-                <div class="w-full md:w-2/3 p-6 flex flex-col h-full bg-white">
-                    <div class="hidden md:flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold text-gray-900">Regras Ativas</h3>
+
+                <div
+                    class="w-full sm:w-2/3 flex flex-col h-full bg-white overflow-hidden border-t sm:border-t-0 border-gray-100">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center shrink-0 bg-white z-10">
+                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <i class="ph ph-arrows-clockwise text-purple-600"></i> Regras Ativas
+                        </h3>
+
                         <button onclick="document.getElementById('modalFixas').classList.add('hidden')"
-                            class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+                            class="hidden sm:block text-gray-400 hover:text-gray-600">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto" id="listaFixas"></div>
+
+                    <div class="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50" id="listaFixas">
+                        <div class="text-center text-gray-400 mt-10">
+                            <i class="ph ph-spinner animate-spin text-2xl"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -434,22 +470,27 @@
         </div>
 
         <div id="modalTransacao"
-            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity duration-300">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all scale-100">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-5">
-                        <h3 class="text-xl font-bold text-gray-900" id="modalTitulo">Nova Transação</h3>
-                        <button onclick="fecharModalTransacao()" class="text-gray-400 hover:text-gray-600 transition">
-                            <i class="ph ph-x text-xl"></i>
-                        </button>
-                    </div>
+            class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 transition-opacity duration-300">
+            <div
+                class="bg-white w-full h-full sm:h-auto sm:max-w-md sm:rounded-2xl shadow-2xl transform transition-all scale-100 flex flex-col">
 
-                    <form id="formTransacao" class="space-y-4">
+                <div
+                    class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 sm:bg-white sm:rounded-t-2xl">
+                    <h3 class="text-xl font-bold text-gray-900" id="modalTitulo">Nova Transação</h3>
+                    <button onclick="fecharModalTransacao()"
+                        class="p-2 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600 transition">
+                        <i class="ph ph-x text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto flex-1">
+                    <form id="formTransacao" class="space-y-5">
                         <input type="hidden" id="transacaoId">
+
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição</label>
                             <input type="text" id="descInput" required
-                                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-500 transition"
                                 placeholder="Ex: Mercado...">
                         </div>
 
@@ -457,12 +498,12 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Valor (R$)</label>
                                 <input type="number" id="valorInput" step="0.01" required
-                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 font-mono font-medium outline-none">
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono font-bold text-lg outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data</label>
                                 <input type="date" id="dataInput" required
-                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none">
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
 
@@ -470,7 +511,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
                                 <select id="tipoInput" onchange="carregarOpcoesCategorias()"
-                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none">
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value="despesa">Despesa</option>
                                     <option value="receita">Receita</option>
                                 </select>
@@ -478,77 +519,93 @@
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Categoria</label>
                                 <select id="categoriaInput"
-                                    class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 outline-none">
+                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value="">Carregando...</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                             <label class="flex items-center gap-3 cursor-pointer">
                                 <input type="checkbox" id="statusInput"
-                                    class="w-5 h-5 text-blue-600 rounded border-gray-300">
+                                    class="w-6 h-6 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
                                 <div>
                                     <span class="block text-sm font-bold text-gray-700">Pago/Recebido?</span>
                                     <span class="block text-xs text-gray-500">Desmarcado = Pendente</span>
                                 </div>
                             </label>
                         </div>
-                        <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg">Salvar
-                            Transação</button>
                     </form>
+                </div>
+
+                <div class="p-5 border-t border-gray-100 bg-gray-50 sm:bg-white sm:rounded-b-2xl">
+                    <button onclick="document.getElementById('formTransacao').requestSubmit()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg text-lg transition transform active:scale-95">
+                        Salvar Transação
+                    </button>
                 </div>
             </div>
         </div>
 
         <div id="modalCategoria"
-            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4">
             <div
-                class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[90vh] md:h-[500px] flex flex-col md:flex-row overflow-hidden">
-                <div class="w-full md:w-1/3 bg-gray-50 p-6 border-b md:border-r border-gray-100 flex flex-col">
-                    <div class="flex justify-between md:block">
-                        <h3 class="text-lg font-bold text-gray-900 mb-4">Nova Categoria</h3>
-                        <button onclick="document.getElementById('modalCategoria').classList.add('hidden')"
-                            class="md:hidden text-gray-400"><i class="ph ph-x text-xl"></i></button>
-                    </div>
+                class="bg-white w-full h-full sm:h-[600px] sm:max-w-4xl sm:rounded-2xl shadow-2xl flex flex-col sm:flex-row overflow-hidden">
+
+                <button onclick="document.getElementById('modalCategoria').classList.add('hidden')"
+                    class="sm:hidden absolute top-4 right-4 z-10 bg-gray-100 p-2 rounded-full text-gray-600">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+
+                <div
+                    class="w-full sm:w-1/3 bg-gray-50 p-6 border-b sm:border-b-0 sm:border-r border-gray-200 flex flex-col shrink-0">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4 mt-2 sm:mt-0">Nova Categoria</h3>
 
                     <form id="formCategoria" class="space-y-4">
                         <input type="hidden" id="catIdEdit">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome</label>
                             <input type="text" id="catNomeInput" required
-                                class="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none">
+                                class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-blue-500"
+                                placeholder="Ex: Alimentação">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
                             <select id="catTipoInput"
-                                class="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none">
+                                class="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none bg-white">
                                 <option value="despesa">Despesa</option>
                                 <option value="receita">Receita</option>
                             </select>
                         </div>
+
                         <button type="submit" id="btnSalvarCat"
-                            class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-sm">Adicionar</button>
+                            class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-sm">Adicionar</button>
+
                         <button type="button" id="btnCancelarEdicaoCat" onclick="resetarFormCategoria()"
-                            class="hidden w-full bg-gray-200 text-gray-600 font-bold py-2 rounded-lg text-sm mt-2">Cancelar</button>
+                            class="hidden w-full bg-white border border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-50 transition mt-2">Cancelar
+                            Edição</button>
                     </form>
                 </div>
-                <div class="w-full md:w-2/3 p-6 flex flex-col h-full bg-white">
-                    <div class="hidden md:flex justify-between items-center mb-4">
+
+                <div class="w-full sm:w-2/3 flex flex-col h-full bg-white overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center shrink-0">
                         <h3 class="text-lg font-bold text-gray-900">Categorias Existentes</h3>
                         <button onclick="document.getElementById('modalCategoria').classList.add('hidden')"
-                            class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+                            class="hidden sm:block text-gray-400 hover:text-gray-600">
+                            <i class="ph ph-x text-xl"></i>
+                        </button>
                     </div>
-                    <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
+
+                    <div class="px-5 py-2 flex gap-2 overflow-x-auto shrink-0 scrollbar-hide">
                         <button onclick="filtrarListaCategorias('all')"
-                            class="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">Todas</button>
+                            class="text-xs font-bold px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">Todas</button>
                         <button onclick="filtrarListaCategorias('receita')"
-                            class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 hover:bg-green-200 text-green-700 whitespace-nowrap">Receitas</button>
+                            class="text-xs font-bold px-4 py-2 rounded-full bg-green-100 hover:bg-green-200 text-green-700 whitespace-nowrap">Receitas</button>
                         <button onclick="filtrarListaCategorias('despesa')"
-                            class="text-xs font-bold px-3 py-1 rounded-full bg-red-100 hover:bg-red-200 text-red-700 whitespace-nowrap">Despesas</button>
+                            class="text-xs font-bold px-4 py-2 rounded-full bg-red-100 hover:bg-red-200 text-red-700 whitespace-nowrap">Despesas</button>
                     </div>
-                    <div class="flex-1 overflow-y-auto pr-2" id="listaCategoriasModal">
+
+                    <div class="flex-1 overflow-y-auto p-5" id="listaCategoriasModal">
                         <div class="text-center text-gray-400 mt-10">Carregando...</div>
                     </div>
                 </div>
