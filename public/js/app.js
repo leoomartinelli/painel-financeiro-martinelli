@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listeners de Filtro
     document.getElementById('filtroMes').addEventListener('change', carregarDashboard);
     document.getElementById('filtroAno').addEventListener('change', carregarDashboard);
+    document.getElementById('formFixa').addEventListener('submit', salvarFixa);
 
     // Listener de Formulários
     document.getElementById('formTransacao').addEventListener('submit', salvarTransacao);
@@ -1127,6 +1128,144 @@ function confirmarAcao(titulo, mensagem, textoBotao = 'Sim, confirmar', corBotao
         novoBtnSim.addEventListener('click', () => fechar(true));
         novoBtnNao.addEventListener('click', () => fechar(false));
     });
+}
+
+
+// --- FUNÇÕES DE RECORRENTES (FIXAS) ---
+
+function abrirModalFixas() {
+    document.getElementById('modalFixas').classList.remove('hidden');
+    carregarOpcoesCategoriasFixas();
+    carregarListaFixas();
+}
+
+// Reutiliza a lógica de categorias, mas joga no select do modal de fixas
+function carregarOpcoesCategoriasFixas() {
+    const select = document.getElementById('fixaCategoria');
+    select.innerHTML = '<option value="">Sem categoria</option>';
+
+    // Pega do cache global que você já tem no app.js
+    categoriasCache.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        select.appendChild(opt);
+    });
+}
+
+async function carregarListaFixas() {
+    const listaEl = document.getElementById('listaFixas');
+    listaEl.innerHTML = '<div class="text-center text-gray-400 mt-4">Carregando...</div>';
+
+    const res = await fetchAPI('/fixas');
+
+    if (res && res.success) {
+        listaEl.innerHTML = '';
+        if (res.data.length === 0) {
+            listaEl.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400"><i class="ph ph-calendar-check text-4xl mb-2"></i><span>Nenhuma conta fixa cadastrada.</span></div>';
+            return;
+        }
+
+        res.data.forEach(f => {
+            const isDespesa = f.tipo === 'despesa';
+            const corIcone = isDespesa ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50';
+
+            // Lógica do Status (Pago/Pendente)
+            let htmlStatus = '';
+            if (f.status_mes_atual === 'pago') {
+                htmlStatus = `<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><i class="ph ph-check-circle"></i> Pago</span>`;
+            } else if (f.status_mes_atual === 'pendente') {
+                htmlStatus = `<span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><i class="ph ph-clock"></i> Pendente</span>`;
+            } else {
+                htmlStatus = `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full w-fit">Não gerado</span>`;
+            }
+
+            // Lógica da Recorrência (Infinito ou 1/12)
+            let textoRecorrencia = '<span class="text-blue-600"><i class="ph ph-infinity"></i> Fixo Mensal</span>';
+
+            if (f.limite_parcelas > 0) {
+                // Se já acabou as parcelas
+                if (f.parcelas_geradas >= f.limite_parcelas) {
+                    textoRecorrencia = `<span class="text-gray-400 font-bold">Finalizado (${f.parcelas_geradas}/${f.limite_parcelas})</span>`;
+                    htmlStatus = ''; // Não mostra status se já acabou
+                } else {
+                    textoRecorrencia = `<span class="text-purple-600 font-bold">Parcela ${parseInt(f.parcelas_geradas) + 1}/${f.limite_parcelas}</span>`;
+                }
+            }
+
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center p-4 mb-3 rounded-lg border border-gray-100 hover:shadow-sm transition bg-white";
+
+            div.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg ${corIcone} flex flex-col items-center justify-center font-bold shadow-sm shrink-0">
+                        <span class="text-xs uppercase">DIA</span>
+                        <span class="text-lg leading-none">${f.dia_vencimento}</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h4 class="font-bold text-gray-800 leading-tight">${f.descricao}</h4>
+                            ${htmlStatus}
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-gray-500">${f.categoria_nome || 'Sem Categoria'}</span>
+                            <span class="text-gray-300">|</span>
+                            ${textoRecorrencia}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right shrink-0 ml-2">
+                    <div class="font-mono font-bold text-gray-700 mb-1">
+                        ${parseFloat(f.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                    <button onclick="excluirFixa(${f.id})" class="text-red-400 hover:text-red-600 text-xs font-bold flex items-center justify-end gap-1 ml-auto">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            `;
+            listaEl.appendChild(div);
+        });
+    }
+}
+
+async function salvarFixa(e) {
+    e.preventDefault();
+    toggleLoader(true);
+
+    const body = {
+        descricao: document.getElementById('fixaDesc').value,
+        valor: document.getElementById('fixaValor').value,
+        dia: document.getElementById('fixaDia').value,
+        tipo: document.getElementById('fixaTipo').value,
+        id_categoria: document.getElementById('fixaCategoria').value,
+        limite_parcelas: document.getElementById('fixaLimite').value // <--- NOVO CAMPO
+    };
+
+    const res = await fetchAPI('/fixas', {
+        method: 'POST',
+        body: JSON.stringify(body)
+    });
+
+    toggleLoader(false);
+
+    if (res && res.success) {
+        document.getElementById('formFixa').reset();
+        carregarListaFixas();
+        carregarDashboard(); // Atualiza para ver se gerou a nova parcela
+        notificar("Regra criada com sucesso!", "sucesso");
+    } else {
+        notificar("Erro ao salvar.", "erro");
+    }
+}
+
+async function excluirFixa(id) {
+    if (!confirm("Deseja parar de gerar essa conta automaticamente? As transações passadas não serão apagadas.")) return;
+
+    toggleLoader(true);
+    await fetchAPI(`/fixas/${id}`, { method: 'DELETE' });
+    toggleLoader(false);
+
+    carregarListaFixas();
 }
 
 

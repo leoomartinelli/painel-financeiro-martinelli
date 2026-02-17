@@ -472,4 +472,147 @@ class PersonalFinanceiro
         return ['success' => $stmt->execute([':link' => $link, ':id' => $idUsuario])];
     }
 
+
+    public function salvarFixa($dados, $idUsuario)
+    {
+        // Aceita o limite ou NULL se estiver vazio
+        $limite = !empty($dados['limite_parcelas']) && $dados['limite_parcelas'] > 0 ? $dados['limite_parcelas'] : null;
+
+        $sql = "INSERT INTO transacoes_fixas (descricao, valor, dia_vencimento, tipo, id_categoria, id_usuario, limite_parcelas) 
+                VALUES (:desc, :valor, :dia, :tipo, :cat, :user, :limite)";
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':desc' => $dados['descricao'],
+                ':valor' => $dados['valor'],
+                ':dia' => $dados['dia'],
+                ':tipo' => $dados['tipo'],
+                ':cat' => !empty($dados['id_categoria']) ? $dados['id_categoria'] : null,
+                ':user' => $idUsuario,
+                ':limite' => $limite
+            ]);
+            return ['success' => true];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+
+
+    public function excluirFixa($id, $idUsuario)
+    {
+        // Ao excluir a fixa, NÃO apagamos as transações passadas, apenas a regra futura
+        $stmt = $this->conn->prepare("DELETE FROM transacoes_fixas WHERE id = :id AND id_usuario = :user");
+        $stmt->execute([':id' => $id, ':user' => $idUsuario]);
+        return ['success' => true];
+    }
+
+    // --- MOTOR DE PROCESSAMENTO AUTOMÁTICO ---
+    public function listarFixas($idUsuario)
+    {
+        $mesAtual = date('m');
+        $anoAtual = date('Y');
+
+        // Agora contamos quantas parcelas JÁ FORAM geradas para saber em qual estamos (ex: 3/12)
+        $sql = "SELECT f.*, 
+                       c.nome as categoria_nome,
+                       t.status as status_mes_atual,
+                       (SELECT COUNT(*) FROM transacoes WHERE id_fixa = f.id) as parcelas_geradas
+                FROM transacoes_fixas f
+                LEFT JOIN categorias c ON f.id_categoria = c.id
+                LEFT JOIN transacoes t ON t.id_fixa = f.id 
+                     AND MONTH(t.data) = :mes 
+                     AND YEAR(t.data) = :ano 
+                     AND t.id_usuario = :user_t
+                WHERE f.id_usuario = :user_f 
+                ORDER BY f.dia_vencimento ASC";
+
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':user_t' => $idUsuario,
+                ':user_f' => $idUsuario,
+                ':mes' => $mesAtual,
+                ':ano' => $anoAtual
+            ]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    public function processarTransacoesFixas($idUsuario)
+    {
+        try {
+            $mesAtual = date('m');
+            $anoAtual = date('Y');
+
+            // 1. Busca todas as regras
+            $stmtFixas = $this->conn->prepare("SELECT * FROM transacoes_fixas WHERE id_usuario = :user");
+            $stmtFixas->execute([':user' => $idUsuario]);
+            $regras = $stmtFixas->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($regras as $regra) {
+                // 1.1 VERIFICAÇÃO DE LIMITE
+                // Conta quantas vezes essa regra já virou transação no histórico total
+                $sqlCount = "SELECT COUNT(*) FROM transacoes WHERE id_fixa = :id_fixa";
+                $stmtCount = $this->conn->prepare($sqlCount);
+                $stmtCount->execute([':id_fixa' => $regra['id']]);
+                $qtdJaGerada = (int) $stmtCount->fetchColumn();
+
+                // Se tem limite definido E já atingiu a quantidade, PULA essa regra (não gera mais)
+                if (!empty($regra['limite_parcelas']) && $qtdJaGerada >= $regra['limite_parcelas']) {
+                    continue;
+                }
+
+                // 2. Verifica se JÁ EXISTE transação NESTE MÊS (para não duplicar)
+                $sqlCheck = "SELECT COUNT(*) FROM transacoes 
+                             WHERE id_fixa = :id_fixa 
+                             AND MONTH(data) = :mes 
+                             AND YEAR(data) = :ano 
+                             AND id_usuario = :user";
+
+                $stmtCheck = $this->conn->prepare($sqlCheck);
+                $stmtCheck->execute([
+                    ':id_fixa' => $regra['id'],
+                    ':mes' => $mesAtual,
+                    ':ano' => $anoAtual,
+                    ':user' => $idUsuario
+                ]);
+
+                if ($stmtCheck->fetchColumn() == 0) {
+                    // 3. SE NÃO EXISTE, CRIA A PENDÊNCIA
+                    $dia = $regra['dia_vencimento'];
+                    $ultimoDiaMes = date('t');
+                    if ($dia > $ultimoDiaMes)
+                        $dia = $ultimoDiaMes;
+
+                    $dataVencimento = "$anoAtual-$mesAtual-$dia";
+
+                    // Personaliza o nome: Ex: "Compra Carro (1/10)"
+                    $descricaoFinal = $regra['descricao'];
+                    if (!empty($regra['limite_parcelas'])) {
+                        $numeroParcelaAtual = $qtdJaGerada + 1;
+                        $descricaoFinal .= " ($numeroParcelaAtual/" . $regra['limite_parcelas'] . ")";
+                    }
+
+                    $sqlInsert = "INSERT INTO transacoes (descricao, valor, data, tipo, status, id_categoria, id_usuario, id_fixa, observacao) 
+                                  VALUES (:desc, :valor, :data, :tipo, 'pendente', :cat, :user, :id_fixa, 'Recorrência Automática')";
+
+                    $this->conn->prepare($sqlInsert)->execute([
+                        ':desc' => $descricaoFinal,
+                        ':valor' => $regra['valor'],
+                        ':data' => $dataVencimento,
+                        ':tipo' => $regra['tipo'],
+                        ':cat' => !empty($regra['id_categoria']) ? $regra['id_categoria'] : null,
+                        ':user' => $idUsuario,
+                        ':id_fixa' => $regra['id']
+                    ]);
+                }
+            }
+        } catch (Exception $e) {
+            // Silencia erro para não travar dashboard
+        }
+    }
+
 }

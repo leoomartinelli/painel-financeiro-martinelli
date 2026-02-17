@@ -28,6 +28,8 @@ class PersonalController
     public function getDashboard()
     {
         $idUsuario = $_SESSION['usuario_id']; //
+
+        $this->model->processarTransacoesFixas($idUsuario);
         $mes = $_GET['mes'] ?? date('m');
         $ano = $_GET['ano'] ?? date('Y');
 
@@ -203,6 +205,33 @@ class PersonalController
         }
 
         $res = $this->model->salvarLinkWpp($input['link'], $idUsuario);
+        $this->jsonResponse($res);
+    }
+
+    public function listarFixas()
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $dados = $this->model->listarFixas($idUsuario);
+        $this->jsonResponse(['success' => true, 'data' => $dados]);
+    }
+
+    public function salvarFixa()
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($input['descricao']) || empty($input['valor']) || empty($input['dia'])) {
+            $this->jsonResponse(['success' => false, 'message' => 'Preencha descrição, valor e dia.'], 400);
+        }
+
+        $res = $this->model->salvarFixa($input, $idUsuario);
+        $this->jsonResponse($res);
+    }
+
+    public function excluirFixa($id)
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $res = $this->model->excluirFixa($id, $idUsuario);
         $this->jsonResponse($res);
     }
 

@@ -162,6 +162,19 @@ try {
                 $personalController->salvarLinkWhatsapp();
             break;
 
+        case ($requestUri === '/api/fixas'):
+            if ($requestMethod === 'GET')
+                $personalController->listarFixas();
+            elseif ($requestMethod === 'POST')
+                $personalController->salvarFixa();
+            break;
+
+        case preg_match('/^\/api\/fixas\/(\d+)$/', $requestUri, $matches):
+            $id = $matches[1];
+            if ($requestMethod === 'DELETE')
+                $personalController->excluirFixa($id);
+            break;
+
 
 
         // GESTÃO DE ARQUIVOS ESTÁTICOS & 404
