@@ -1268,6 +1268,22 @@ async function excluirFixa(id) {
     carregarListaFixas();
 }
 
+function toggleMenuMobile() {
+    const menu = document.getElementById('mobileMenu');
+    menu.classList.toggle('hidden');
+}
+
+// Fechar menu ao clicar fora (opcional, mas melhora UX)
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('mobileMenu');
+    const btn = document.querySelector('button[onclick="toggleMenuMobile()"]');
+
+    // Se o clique não foi no menu nem no botão e o menu está aberto
+    if (!menu.contains(e.target) && !btn.contains(e.target) && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+    }
+});
+
 
 
 // --- UTILITÁRIOS ---
