@@ -145,7 +145,7 @@ try {
                 $personalController->movimentarCofrinho();
             break;
 
-      
+
 
         case preg_match('/^\/api\/cofrinhos\/(\d+)$/', $requestUri, $matches):
             $id = $matches[1];
@@ -155,6 +155,11 @@ try {
                 // Agora o PUT na raiz do ID chama a edição geral
                 $personalController->editarCofrinho($id);
             }
+            break;
+
+        case ($requestUri === '/api/usuario/wpp'):
+            if ($requestMethod === 'POST')
+                $personalController->salvarLinkWhatsapp();
             break;
 
 

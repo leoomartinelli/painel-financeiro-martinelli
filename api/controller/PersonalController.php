@@ -192,4 +192,19 @@ class PersonalController
         $res = $this->model->atualizarCofrinho($id, $input['nome'], $input['meta'], $idUsuario);
         $this->jsonResponse($res);
     }
+
+    public function salvarLinkWhatsapp()
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($input['link'])) {
+            $this->jsonResponse(['success' => false, 'message' => 'Link inválido'], 400);
+        }
+
+        $res = $this->model->salvarLinkWpp($input['link'], $idUsuario);
+        $this->jsonResponse($res);
+    }
+
+
 }

@@ -30,6 +30,14 @@
                     <span class="font-bold text-xl tracking-tight text-gray-900">Financeiro Martinelli</span>
                 </div>
                 <div class="flex items-center gap-4">
+                    <button id="btnWhatsappAction" onclick="acaoWhatsapp()"
+                        class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition shadow-md flex items-center justify-center group relative">
+                        <i class="ph ph-whatsapp-logo text-xl"></i>
+                        <span
+                            class="absolute top-10 right-0 w-max bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                            Grupo do Zap
+                        </span>
+                    </button>
 
                     <button onclick="abrirModalCategoria()"
                         class="text-sm font-medium text-gray-500 hover:text-blue-600 transition">
@@ -589,6 +597,41 @@
                     Cancelar
                 </button>
             </div>
+        </div>
+    </div>
+
+    <div id="modalWhatsapp"
+        class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative">
+            <button onclick="document.getElementById('modalWhatsapp').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div
+                    class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="ph ph-whatsapp-logo text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900">Criar Grupo Financeiro</h3>
+                <p class="text-sm text-gray-500">Informe seu número para criarmos um grupo automático para você
+                    gerenciar suas finanças pelo WhatsApp.</p>
+            </div>
+
+            <form id="formWpp" onsubmit="processarCriacaoGrupo(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Seu WhatsApp (com DDD)</label>
+                    <input type="text" id="wppInput" placeholder="Ex: 5511999999999" required
+                        class="w-full border border-gray-300 rounded-lg p-3 text-lg font-bold text-center focus:ring-2 focus:ring-green-500 outline-none">
+                    <p class="text-[10px] text-gray-400 mt-1 text-center">Apenas números. Inclua o código do país (55).
+                    </p>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg shadow-lg transition flex justify-center items-center gap-2">
+                    <i class="ph ph-paper-plane-right"></i> Gerar Grupo
+                </button>
+            </form>
         </div>
     </div>
 

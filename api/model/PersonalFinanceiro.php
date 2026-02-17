@@ -84,12 +84,15 @@ class PersonalFinanceiro
             // Saldo Atual + O que vai entrar - (Contas normais a pagar) - (Fatura do cartão)
             $saldoPrevistoCalc = ($saldoAtualCalc + $valReceitaPendente) - ($valDespesaPendente + $valFaturaTotal);
 
+            $linkWpp = $this->getLinkWpp($idUsuario);
+
             return [
                 'receitas' => ['receita_realizada' => $valReceitaRealizada, 'receita_pendente' => $valReceitaPendente],
                 'despesas' => ['despesa_realizada' => $valDespesaRealizada, 'despesa_pendente' => $valDespesaPendente],
                 'saldo_atual' => $saldoAtualCalc,
                 'saldo_previsto' => $saldoPrevistoCalc,
-                'fatura_prevista' => $valFaturaTotal
+                'fatura_prevista' => $valFaturaTotal,
+                'link_wpp' => $linkWpp
             ];
         } catch (PDOException $e) {
             return null;
@@ -452,6 +455,21 @@ class PersonalFinanceiro
         $res = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $res ? $res['id'] : 0;
+    }
+
+    public function getLinkWpp($idUsuario)
+    {
+        $stmt = $this->conn->prepare("SELECT link_grupo_wpp FROM usuarios WHERE id = :id");
+        $stmt->execute([':id' => $idUsuario]);
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $res ? $res['link_grupo_wpp'] : null;
+    }
+
+    // 2. Adicione esta função para salvar o link
+    public function salvarLinkWpp($link, $idUsuario)
+    {
+        $stmt = $this->conn->prepare("UPDATE usuarios SET link_grupo_wpp = :link WHERE id = :id");
+        return ['success' => $stmt->execute([':link' => $link, ':id' => $idUsuario])];
     }
 
 }

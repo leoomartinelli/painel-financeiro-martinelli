@@ -70,6 +70,8 @@ async function carregarDashboard() {
     toggleLoader(false);
 }
 
+let linkWppSalvo = null;
+
 function atualizarCards(resumo) {
     // Helper de formatação
     const fmt = (v) => parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -122,6 +124,100 @@ function atualizarCards(resumo) {
     } else {
         elSaldoPrev.classList.remove('text-white');
         elSaldoPrev.classList.add('text-red-400');
+    }
+
+    if (resumo.link_wpp) {
+        linkWppSalvo = resumo.link_wpp;
+        atualizarEstiloBotaoWpp(true);
+    } else {
+        linkWppSalvo = null;
+        atualizarEstiloBotaoWpp(false);
+    }
+}
+
+
+function atualizarEstiloBotaoWpp(temLink) {
+    const btn = document.getElementById('btnWhatsappAction');
+    if (temLink) {
+        // Se já tem link, deixa o botão mais "ativo" ou mantém normal
+        btn.classList.remove('animate-pulse'); // Remove animação se tiver
+        btn.title = "Acessar Grupo";
+    } else {
+        // Se não tem, pode colocar uma animação para chamar atenção
+        btn.title = "Criar Grupo";
+    }
+}
+
+function acaoWhatsapp() {
+    if (linkWppSalvo) {
+        // Se já tem link, abre em nova aba
+        window.open(linkWppSalvo, '_blank');
+    } else {
+        // Se não tem, abre modal
+        document.getElementById('modalWhatsapp').classList.remove('hidden');
+        document.getElementById('wppInput').focus();
+    }
+}
+
+async function processarCriacaoGrupo(e) {
+    e.preventDefault();
+
+    const telefone = document.getElementById('wppInput').value.replace(/\D/g, ''); // Limpa caracteres não numéricos
+
+    if (telefone.length < 10) {
+        notificar("Número de telefone parece inválido.", "erro");
+        return;
+    }
+
+    toggleLoader(true);
+    document.getElementById('modalWhatsapp').classList.add('hidden');
+
+    try {
+        // 1. CHAMA O N8N
+        notificar("Solicitando criação do grupo...", "info");
+
+        const n8nResponse = await fetch('https://sistema-crescer-n8n.vuvd0x.easypanel.host/webhook/criar-grupo-financeiro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: telefone })
+        });
+
+        if (!n8nResponse.ok) throw new Error("Erro na comunicação com o robô.");
+
+        const dadosN8n = await n8nResponse.json();
+
+        // O n8n deve retornar um JSON tipo: { "link": "https://..." }
+        // Ajuste 'dadosN8n.link' conforme o retorno real do seu n8n
+        const linkRecebido = dadosN8n.link || dadosN8n.groupLink || dadosN8n.url;
+
+        if (!linkRecebido) {
+            throw new Error("O robô não retornou o link do grupo.");
+        }
+
+        // 2. SALVA O LINK NO NOSSO BACKEND
+        const saveRes = await fetchAPI('/usuario/wpp', {
+            method: 'POST',
+            body: JSON.stringify({ link: linkRecebido })
+        });
+
+        if (saveRes && saveRes.success) {
+            linkWppSalvo = linkRecebido;
+            atualizarEstiloBotaoWpp(true);
+            notificar("Grupo criado e vinculado com sucesso!", "sucesso");
+
+            // Opcional: Já abre o grupo
+            setTimeout(() => window.open(linkRecebido, '_blank'), 1500);
+        } else {
+            throw new Error("Grupo criado, mas erro ao salvar no sistema.");
+        }
+
+    } catch (error) {
+        console.error(error);
+        notificar(error.message || "Erro ao criar grupo.", "erro");
+        // Reabre o modal em caso de erro para tentar de novo
+        setTimeout(() => document.getElementById('modalWhatsapp').classList.remove('hidden'), 2000);
+    } finally {
+        toggleLoader(false);
     }
 }
 
