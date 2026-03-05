@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Planejamento</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        #log {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            white-space: pre-wrap;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Teste Diagnostico - Planejamento Futuro</h2>
+    <div id="log">Aguardando...</div>
+    <div style="position:relative; height:400px; width:100%;">
+        <canvas id="planejamentoChart"></canvas>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        function loga(msg) { log.textContent += '\n' + msg; console.log(msg); }
+
+        try {
+            // Constantes
+            const PLAN_RENTABILIDADE_ANUAL = 0.12;
+            const PLAN_IPCA_ANUAL = 0.05;
+            const PLAN_IR_INVESTIMENTO = 0.15;
+            const PLAN_IDADE_MAX = 95;
+            const taxaMensalBruta = Math.pow(1 + PLAN_RENTABILIDADE_ANUAL, 1 / 12) - 1;
+            const taxaMensalIPCA = Math.pow(1 + PLAN_IPCA_ANUAL, 1 / 12) - 1;
+
+            loga('Taxas OK: bruta=' + taxaMensalBruta.toFixed(6) + ' ipca=' + taxaMensalIPCA.toFixed(6));
+
+            // Simulacao simples
+            let patrimonio = 0;
+            let fatorIPCA = 1;
+            const idadeAtual = 30;
+            const idadeAposentadoria = 55;
+            const aporteMensal = 1000;
+            const rendaDesejada = 5000;
+            const mesesAcumulacao = (idadeAposentadoria - idadeAtual) * 12;
+            const totalMeses = (PLAN_IDADE_MAX - idadeAtual) * 12;
+            const resultado = [];
+
+            for (let mes = 0; mes <= totalMeses; mes++) {
+                fatorIPCA *= (1 + taxaMensalIPCA);
+                if (patrimonio < 0) patrimonio = 0;
+                if (mes < mesesAcumulacao) {
+                    const lucro = patrimonio * taxaMensalBruta;
+                    patrimonio += (lucro * (1 - PLAN_IR_INVESTIMENTO)) + aporteMensal;
+                } else {
+                    const lucro = patrimonio * taxaMensalBruta;
+                    patrimonio += lucro * (1 - PLAN_IR_INVESTIMENTO);
+                    patrimonio -= rendaDesejada * fatorIPCA;
+                }
+                resultado.push({ idade: idadeAtual + mes / 12, patrimonioReal: patrimonio / fatorIPCA });
+            }
+
+            loga('Simulacao OK. Pontos: ' + resultado.length);
+            loga('Patrimonio max: ' + Math.max(...resultado.map(p => p.patrimonioReal)).toFixed(0));
+
+            const anuais = resultado.filter((_, i) => i % 12 === 0);
+            loga('Pontos anuais: ' + anuais.length);
+
+            const idxAnnot = anuais.findIndex(p => p.idade >= idadeAposentadoria);
+            loga('Indice aposentadoria: ' + idxAnnot);
+
+            const dadosAcum = anuais.map((p, i) => i <= idxAnnot ? p.patrimonioReal : null);
+            const dadosRet = anuais.map((p, i) => i >= idxAnnot ? p.patrimonioReal : null);
+            const idades = anuais.map(p => Math.floor(p.idade));
+
+            loga('Criando grafico Chart.js...');
+            const ctx = document.getElementById('planejamentoChart').getContext('2d');
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: idades,
+                    datasets: [
+                        { label: 'Acumulacao', data: dadosAcum, borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.05)', fill: true, spanGaps: false, tension: 0.3 },
+                        { label: 'Retirada', data: dadosRet, borderColor: 'orange', backgroundColor: 'rgba(255,165,0,0.05)', fill: true, spanGaps: false, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                }
+            });
+
+            loga('GRAFICO CRIADO COM SUCESSO!');
+
+        } catch (e) {
+            loga('ERRO: ' + e.message + '\n' + e.stack);
+        }
+    </script>
+</body>
+
+</html>
