@@ -24,10 +24,12 @@ class PersonalController
         exit;
     }
 
+    // --- DASHBOARD & TRANSAÇÕES ---
+
     // GET /api/dashboard
     public function getDashboard()
     {
-        $idUsuario = $_SESSION['usuario_id']; //
+        $idUsuario = $_SESSION['usuario_id'];
 
         $this->model->processarTransacoesFixas($idUsuario);
         $mes = $_GET['mes'] ?? date('m');
@@ -90,6 +92,9 @@ class PersonalController
         $this->jsonResponse($resultado);
     }
 
+
+    // --- CATEGORIAS ---
+
     // GET /api/categorias
     public function listarCategorias()
     {
@@ -113,6 +118,26 @@ class PersonalController
         $this->jsonResponse($resultado);
     }
 
+    // Alias caso o index.php chame criarCategoria
+    public function criarCategoria()
+    {
+        $this->salvarCategoria();
+    }
+
+    // PUT /api/categorias/{id}
+    public function editarCategoria($id)
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($input['nome']) || empty($input['tipo'])) {
+            $this->jsonResponse(['success' => false, 'message' => 'Dados incompletos.'], 400);
+        }
+
+        $resultado = $this->model->atualizarCategoria($id, $input['nome'], $input['tipo'], $idUsuario);
+        $this->jsonResponse($resultado);
+    }
+
     // DELETE /api/categorias/{id}
     public function excluirCategoria($id)
     {
@@ -120,6 +145,9 @@ class PersonalController
         $resultado = $this->model->deletarCategoria($id, $idUsuario);
         $this->jsonResponse($resultado);
     }
+
+
+    // --- CARTÃO DE CRÉDITO ---
 
     // GET /api/cartao
     public function getDadosCartao()
@@ -136,6 +164,7 @@ class PersonalController
         $resultado = $this->model->pagarFatura($idUsuario);
         $this->jsonResponse($resultado);
     }
+
 
     // --- COFRINHOS ---
 
@@ -185,15 +214,60 @@ class PersonalController
         $idUsuario = $_SESSION['usuario_id'];
         $input = json_decode(file_get_contents('php://input'), true);
 
-        // Verifica se veio nome e meta
         if (empty($input['nome']) || !isset($input['meta'])) {
             $this->jsonResponse(['success' => false, 'message' => 'Nome e Meta são obrigatórios'], 400);
         }
 
-        // Chama o método atualizado do Model
         $res = $this->model->atualizarCofrinho($id, $input['nome'], $input['meta'], $idUsuario);
         $this->jsonResponse($res);
     }
+
+    public function editarMetaCofrinho($id)
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!isset($input['meta']) || $input['meta'] < 0) {
+            $this->jsonResponse(['success' => false, 'message' => 'Valor da meta inválido.'], 400);
+        }
+
+        $res = $this->model->atualizarMetaCofrinho($id, $input['meta'], $idUsuario);
+        $this->jsonResponse($res);
+    }
+
+
+    // --- ORÇAMENTO MENSAL ---
+
+    // GET /api/orcamento?mes=&ano=
+    public function getOrcamento()
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $mes = $_GET['mes'] ?? date('m');
+        $ano = $_GET['ano'] ?? date('Y');
+
+        $dados = $this->model->getOrcamento($mes, $ano, $idUsuario);
+        $this->jsonResponse(['success' => true, 'data' => $dados]);
+    }
+
+    public function salvarOrcamento()
+    {
+        $idUsuario = $_SESSION['usuario_id'];
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $mes = $input['mes'] ?? date('m');
+        $ano = $input['ano'] ?? date('Y');
+        $alocacoes = $input['alocacoes'] ?? [];
+
+        if (empty($alocacoes)) {
+            $this->jsonResponse(['success' => false, 'message' => 'Nenhuma alocação enviada.'], 400);
+        }
+
+        $res = $this->model->salvarOrcamento($mes, $ano, $alocacoes, $idUsuario);
+        $this->jsonResponse($res);
+    }
+
+
+    // --- INTEGRAÇÕES E RECORRENTES ---
 
     public function salvarLinkWhatsapp()
     {
@@ -204,7 +278,10 @@ class PersonalController
             $this->jsonResponse(['success' => false, 'message' => 'Link inválido'], 400);
         }
 
-        $res = $this->model->salvarLinkWpp($input['link'], $idUsuario);
+        $link = $input['link'];
+        $idGrupo = $input['id_grupo'] ?? null;
+
+        $res = $this->model->salvarLinkWpp($link, $idGrupo, $idUsuario);
         $this->jsonResponse($res);
     }
 
@@ -234,6 +311,4 @@ class PersonalController
         $res = $this->model->excluirFixa($id, $idUsuario);
         $this->jsonResponse($res);
     }
-
-
 }

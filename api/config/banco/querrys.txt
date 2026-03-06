@@ -83,3 +83,5 @@ ALTER TABLE transacoes ADD COLUMN id_fixa INT NULL;
 ALTER TABLE transacoes ADD COLUMN id_fixa INT NULL;
 
 ALTER TABLE transacoes_fixas ADD COLUMN limite_parcelas INT DEFAULT NULL;
+
+ALTER TABLE usuarios ADD COLUMN id_grupo_wpp VARCHAR(100) NULL AFTER link_grupo_wpp;
